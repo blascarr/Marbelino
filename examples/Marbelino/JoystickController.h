@@ -12,16 +12,14 @@
 //Process Variance - usually a small number between 0.001 and 1 - how fast your measurement moves. Recommended 0.01. Should be tunned to your needs.
 #define kalman_variance 1
   
-SimpleKalmanFilter simpleKalmanFilter(kalman_measure, kalman_estimation, kalman_variance);
+SimpleKalmanFilter YFilter(kalman_measure, kalman_estimation, kalman_variance);
 
-#define basesignal_Y 517
-
-
+SimpleKalmanFilter XFilter(kalman_measure, kalman_estimation, kalman_variance);
 
 class JoystickController{
   public:
-    int joystick_X, joystick_Y, joystick_C;
-    int joystick_offset = 10;
+    int joystick_X, joystick_Y, joystick_C; //INPUT PINS
+    int joystick_offset = 10; // Cleaning Limits
     int step_arrow = 10;
     int last_reading = 0;
     
@@ -42,15 +40,20 @@ class JoystickController{
       if ( ( reading > ( 1023/2 - joystick_offset ) )  &&  ( reading < ( 1023/2 + joystick_offset ) ) ){ reading = 1023/2 ;}
 
       sample = map ( reading , 0, 1023, step_arrow , -step_arrow );
-      int estimated_value = simpleKalmanFilter.updateEstimate(sample);
-    
+      int estimated_value = XFilter.updateEstimate(sample);
+      
+      // Change value instead of estimated value
       return sample;
     }
 
     int readY(){
       int sample = analogRead( joystick_Y );
-      float estimated_value = simpleKalmanFilter.updateEstimate(sample);
+      float estimated_value = YFilter.updateEstimate(sample);
       return estimated_value;
+    }
+
+    int readYraw(){
+      return analogRead( joystick_Y );
     }
 
     bool readClick(){

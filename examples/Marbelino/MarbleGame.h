@@ -161,12 +161,14 @@ class marblegame{
     }
 
     void init(){
+        strip.begin();
         tft.init();
         joystick.init();
-  
+        
         // Draw Radar Interface
         tft.draw_radar();
     }
+    
     //------------------Players Manager---------------------------//
     void addPlayer( marbleplayer player ){
       players[0] = player;
@@ -197,7 +199,7 @@ class marblegame{
 
     //------------------LED Movement Manager---------------------------//
     void update_strip(){
-            if ( marbleOn ){
+      if ( marbleOn ){
         
         if( millis() - timestamp > timeInterval ){
           
@@ -285,7 +287,11 @@ class marblegame{
         power_time = millis();
         int reading = joystick.readY();
         
-        tft.draw_powerbar( reading );
+        int power = tft.draw_powerbar( reading, joystick.readYraw() );
+        if( power > 0 ){
+          Serial.print("Launch");
+            marblegame::launch( power );
+        } 
       }
     }
       

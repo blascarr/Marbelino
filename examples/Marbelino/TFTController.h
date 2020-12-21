@@ -93,7 +93,7 @@ class TFTMarble : public Adafruit_ST7735 {
           int invert_sample = ( 1023 - raw );
           int invert_value = ( 1023 - reading );
           
-          if ( invert_sample > 600 ){ onback = true; }
+          if ( invert_sample > 700 ){ onback = true; }
          
           //Fix Fire Once - Non negative values
           bool offset = ( invert_sample <= ( base_signal + signal_offset ) ) && ( invert_sample >=  base_signal - signal_offset  ) && ( invert_value > medium_value );
@@ -109,6 +109,9 @@ class TFTMarble : public Adafruit_ST7735 {
             //Blue Bar
             TFTMarble::fillRect( power_x+1, power_y+1 + power_height - power_tft , power_w-2, power_tft-1 , TFTBLUE  );
 
+            //Power Label
+            TFTMarble::clearLabel( "888" , power_x + power_w + 5, power_y , TFTBLUE );
+            TFTMarble::println( power_h );
             
           }
 
@@ -162,7 +165,25 @@ class TFTMarble : public Adafruit_ST7735 {
       
     }
 
-    void update(){
+    void drawHeader( char* header){
+        TFTMarble::clearLabel( header ,  w/2 , power_y , TFTBLUE, true );
+        TFTMarble::println( header );
+    }
+
+    void clearLabel( char* label , int x, int y, uint32_t c, bool center = false ){
+      int16_t x_label, y_label;
+      uint16_t w_label, h_label;
+      TFTMarble::getTextBounds( label  , x, y, &x_label, &y_label, &w_label, &h_label);
+     
+      TFTMarble::setTextColor( c ); 
+      if( center ) {
+         TFTMarble::setCursor( x-w_label/2, y-h_label/2 );
+         TFTMarble::fillRect( x-w_label/2, y-h_label/2, w_label, h_label ,TFTWHITE);
+      }else{
+         TFTMarble::fillRect( x_label, y_label, w_label, h_label ,TFTWHITE);
+         TFTMarble::setCursor( x, y );
+      }
       
+      //TFTMarble::println( label );
     }
 };

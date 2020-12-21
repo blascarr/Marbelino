@@ -15,12 +15,12 @@ uint32_t WHITE = Color( 255,255,255 );
 uint32_t CYAN = Color( 0,200,200 );
 
 uint32_t colorList[] = {
-  RED,
+  //RED, //Color for Fail Hole
   GREEN,
   BLUE,
   YELLOW,
   MAGENTA,
-  WHITE,
+  //WHITE, //Color for Hole
   CYAN
 };
 
@@ -52,6 +52,7 @@ class marbleplayer{
     //----- marble Controller -----//
     marble* current_marble;
     uint8_t current_nmarble = 0;
+    uint8_t points = 0;
     
     marble marbles[ NUM_MARBLES ];
 
@@ -66,7 +67,7 @@ class marbleplayer{
     }
     
     marbleplayer( char* name ){
-
+      playername = name;
       setMarbleColors( num_player );
       current_marble = &marbles[0];
     }
@@ -80,12 +81,8 @@ class marbleplayer{
     }
 
     void nextMarble(){
-      ( current_nmarble == NUM_MARBLES -1 ) ? 0: current_nmarble++ ;
+      current_nmarble = ( current_nmarble == NUM_MARBLES -1 ) ? 0: current_nmarble+1 ;
       set_current_marble( current_nmarble );
-    }
-
-    void launchmarble( ){
-      
     }
 
     void set_current_marble( int nmarble ){
@@ -145,7 +142,9 @@ class marblegame{
     int T_MAX_VALUE = 300;
 
     marbleplayer players[ NUM_PLAYERS ];
-    uint8_t current_player = 0;
+    
+    marbleplayer& current_player ;
+    uint8_t current_nplayer = 0;
     uint8_t num_players = 0;
 
     marblegame(){
@@ -167,6 +166,9 @@ class marblegame{
         
         // Draw Radar Interface
         tft.draw_radar();
+
+        //Draw Players
+        //tft.drawHeader("Player 1");
     }
     
     //------------------Players Manager---------------------------//
@@ -185,7 +187,16 @@ class marblegame{
     }
 
     void nextPlayer(){
+      current_nplayer = ( current_nplayer == (int)(NUM_PLAYERS -1) ) ? 0: current_nplayer+1 ;
+      Serial.print( "Player : ");
+      Serial.print( players [current_nplayer].playername );
+      //Draw name o Top
+      tft.drawHeader( players [current_nplayer].playername );
       
+      // Next Marble
+      marblegame::set_next_marble();
+      Serial.print( "Marble : ");
+      Serial.println( players [current_nplayer].current_nmarble );
     }
     //----------------------Marble Manager---------------------------//
     void set_current_marble( int index = 0){
@@ -193,7 +204,7 @@ class marblegame{
     }
 
     void set_next_marble( ){
-      players [current_player].nextMarble();
+      players [current_nplayer].nextMarble();
     }
 
 
@@ -241,17 +252,17 @@ class marblegame{
 
           // ----- Marble Manage -----//
 
-          players [current_player].current_marble->oldPosition = players [current_player].current_marble->position;
-          players [current_player].current_marble->position += round( dx );
+          players [current_nplayer].current_marble->oldPosition = players [current_nplayer].current_marble->position;
+          players [current_nplayer].current_marble->position += round( dx );
           
-          if( players [current_player].current_marble->position > NUM_LEDS_PER_STRIP ){
-            players [current_player].current_marble->position = players [current_player].current_marble->position - NUM_LEDS_PER_STRIP ;
+          if( players [current_nplayer].current_marble->position > NUM_LEDS_PER_STRIP ){
+            players [current_nplayer].current_marble->position = players [current_nplayer].current_marble->position - NUM_LEDS_PER_STRIP ;
           }
 
           //-------- Draw Marble ---------//
-          strip.setPixelColor( players [current_player].current_marble->oldPosition, strip.Color(0, 0, 0) );
+          strip.setPixelColor( players [current_nplayer].current_marble->oldPosition, strip.Color(0, 0, 0) );
           strip.show();
-          strip.setPixelColor( players [current_player].current_marble->position , players [current_player].current_marble->color  );
+          strip.setPixelColor( players [current_nplayer].current_marble->position , players [current_nplayer].current_marble->color  );
           strip.show();
           
         }
@@ -289,8 +300,10 @@ class marblegame{
         
         int power = tft.draw_powerbar( reading, joystick.readYraw() );
         if( power > 0 ){
-          Serial.print("Launch");
+          
             marblegame::launch( power );
+            //Change Player and Next Marble
+            marblegame::nextPlayer();
         } 
       }
     }

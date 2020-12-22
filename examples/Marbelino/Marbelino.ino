@@ -5,6 +5,8 @@
 #include <Adafruit_NeoPixel.h>
 
 //#define DEBUG
+//#define MEMORY_DEBUG
+
 
 //----- LED GAME Configuration -----//
 #define NUM_LEDS_PER_STRIP 240

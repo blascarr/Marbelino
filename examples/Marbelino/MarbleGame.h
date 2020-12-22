@@ -2,6 +2,27 @@
 //---------- MARBEL GAME STRUCTURE -----------//
 //--------------------------------------------//
 
+#ifdef __arm__
+  // should use uinstd.h to define sbrk but Due causes a conflict
+  extern "C" char* sbrk(int incr);
+#else  // __ARM__
+  extern char *__brkval;
+#endif  // __arm__
+
+#ifdef MEMORY_DEBUG
+  int freeMemory() {
+    char top;
+    #ifdef __arm__
+      return &top - reinterpret_cast<char*>(sbrk(0));
+    #elif defined(CORE_TEENSY) || (ARDUINO > 103 && ARDUINO != 151)
+      return &top - __brkval;
+    #else  // __arm__
+      return __brkval ? &top - __brkval : &top - __malloc_heap_start;
+    #endif  // __arm__
+  }
+#endif 
+
+  
 static uint32_t   Color(uint8_t r, uint8_t g, uint8_t b) {
   return ((uint32_t)r << 16) | ((uint32_t)g <<  8) | b;
 }
@@ -27,9 +48,10 @@ uint32_t colorList[] = {
 class marble{
   public:
     uint32_t color =  Color( 0,0,0 );
-    uint32_t oldPosition = 0;
-    uint32_t position = 0;
-
+    uint16_t oldPosition = 0;
+    uint16_t position = 0;
+    marble* crash_marble;
+    
     marble( ):color( Color( 0,0,255 ) ){
     
     }
@@ -41,10 +63,16 @@ class marble{
     void setColor( uint32_t c ){
       color = c;
     }
-  
+
+    int operator - ( const marble& obj ) {
+        return ( position - obj.position );
+    }
 };
 
-
+int compareMarbleOrder (const void * a, const void * b)
+{
+  return ( *(marble*)a - *(marble*)b );
+}
 
 class marbleplayer{
   public:
@@ -53,9 +81,10 @@ class marbleplayer{
     marble* current_marble;
     uint8_t current_nmarble = 0;
     uint8_t points = 0;
-    
-    marble marbles[ NUM_MARBLES ];
 
+    marble* marblequeue[ NUM_MARBLES ];
+    marble marbles[ NUM_MARBLES ];
+    marble marblequeues[ NUM_MARBLES ];
     //----- player Info -----//
     
     uint8_t num_player;
@@ -77,6 +106,7 @@ class marbleplayer{
       
       for ( int i = 0; i < NUM_MARBLES; i++ ){
          marbles[i].setColor( colorList[ i + index*NUM_MARBLES ] );
+         marblequeue[i] = &marbles[i];
       }
     }
 
@@ -90,22 +120,31 @@ class marbleplayer{
       current_marble = &marbles[ nmarble ];
     }
     
-    //Devuelve la posicion con la canica con la que se ha chocado
+    //Devuelve la posicion con la canica con la que se ha chocado como puntero
     int crashmarble(){
       //Calcular la mas cercana de la canica activa y evaluar si se va a chocar contra ella.
       
       return -1;
     }
-    
+
+    void search_crash_marble(){
+      //memcpy ( marbles, marblequeue, sizeof( marbles ) );
+      //int n = sizeof(marblequeue) / sizeof(marblequeue[0]); 
+      
+      for ( int i= 0 ; i < NUM_MARBLES; i++ ){
+          Serial.print( i );
+          Serial.print( " - " );
+          Serial.print( marbles[i].position );
+          Serial.print( " - " );
+          Serial.println( marblequeue[i]->position );
+      }
+    }
 };
 
 
 //-----------------------------------------------------
 //----------- Marble Physics NeoPixels ----------------
 //-----------------------------------------------------
-
-int   Position = 0;
-int   oldPosition = 0;
 
 class marblegame{
   public: 
@@ -114,7 +153,7 @@ class marblegame{
     TFTMarble& tft;
     
     bool marbleOn = true;
-    int power = 50;
+    uint8_t power = 50;
 
     float friction = -40;
 
@@ -124,18 +163,18 @@ class marblegame{
 
     //----- Timer Controller for Joystick and TFT Drawing Functions -----//
     long joy_time = 0;
-    int joy_interval = 20;
+    uint8_t joy_interval = 20;
     
     int power_time = 0;
-    int power_interval = 20;
+    uint8_t power_interval = 20;
     
     long wind_time = 0;
-    int wind_interval = 100;
+    uint8_t wind_interval = 100;
 
     //----- Timer Controller for Marble -----//
     long timestamp;
     int timeInterval = 50;
-    int calc_interval = 50;
+    uint8_t calc_interval = 50;
     
     int tg = 100;
     int T_MIN_VALUE = 30;
@@ -197,6 +236,7 @@ class marblegame{
       marblegame::set_next_marble();
       Serial.print( "Marble : ");
       Serial.println( players [current_nplayer].current_nmarble );
+      players [current_nplayer].search_crash_marble();
     }
     //----------------------Marble Manager---------------------------//
     void set_current_marble( int index = 0){
@@ -249,8 +289,12 @@ class marblegame{
             marbleOn = false;
             return;
           }
+          
+          // ----- Crash Detection -----//
 
-          // ----- Marble Manage -----//
+
+          
+          // ----- Marble Manage ----- //
 
           players [current_nplayer].current_marble->oldPosition = players [current_nplayer].current_marble->position;
           players [current_nplayer].current_marble->position += round( dx );
@@ -290,6 +334,9 @@ class marblegame{
         wind_time = millis();
 
         tft.draw_wind_arrow();
+        #ifdef MEMORY_DEBUG
+          Serial.println( freeMemory()  );
+        #endif
       }
     }
 

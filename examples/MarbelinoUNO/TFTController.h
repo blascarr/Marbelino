@@ -101,8 +101,6 @@ class TFTMarble : public Adafruit_ST7735 {
           if( offset && onback ){
             onback = false;
             power_h = ( (long)( invert_value - medium_value )*100)/medium_value + constantForce; // 0 - 100 Value
-            power_h = (power_h > 100)? 100 : power_h; //Clean to 100 in case reading errors up to limit
-            
             int power_tft = (power_h*power_height )/100; // Convert to pixels 
               
             //Clean TFT 
@@ -167,12 +165,12 @@ class TFTMarble : public Adafruit_ST7735 {
       
     }
 
-    void drawHeader( String header){
+    void drawHeader( char* header){
         TFTMarble::clearLabel( header ,  w/2 , power_y , TFTBLUE, true );
         TFTMarble::println( header );
     }
 
-    void clearLabel( String label , int x, int y, uint32_t c, bool center = false ){
+    void clearLabel( char* label , int x, int y, uint32_t c, bool center = false ){
       int16_t x_label, y_label;
       uint16_t w_label, h_label;
       TFTMarble::getTextBounds( label  , x, y, &x_label, &y_label, &w_label, &h_label);

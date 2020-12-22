@@ -50,8 +50,7 @@ class marble{
     uint32_t color =  Color( 0,0,0 );
     uint16_t oldPosition = 0;
     uint16_t position = 0;
-    marble* next_marble;
-    bool first = false;
+    marble* crash_marble;
     
     marble( ):color( Color( 0,0,255 ) ){
     
@@ -68,22 +67,11 @@ class marble{
     int operator - ( const marble& obj ) {
         return ( position - obj.position );
     }
-
-    void setNextMarble( marble* marble ){
-      next_marble = marble;
-    }
 };
 
 int compareMarbleOrder (const void * a, const void * b)
 {
   return ( *(marble*)a - *(marble*)b );
-}
-
-int compareMarblePointers(const void * a, const void * b)
-{
-  const marble* pa = *( const marble ** )a;
-  const marble* pb = *( const marble ** )b;
-  return  ( pa->position > pb->position );
 }
 
 class marbleplayer{
@@ -100,30 +88,25 @@ class marbleplayer{
     //----- player Info -----//
     
     uint8_t num_player;
-    String playername;
+    char* playername;
 
     marbleplayer( ){
-      init_marbles( num_player );
+      setMarbleColors( num_player );
       current_marble = &marbles[0];
     }
     
-    marbleplayer( String name ){
+    marbleplayer( char* name ){
       playername = name;
-      init_marbles( num_player );
+      setMarbleColors( num_player );
       current_marble = &marbles[0];
     }
 
     //----- Marble Manager -----//
-    void init_marbles( int index = 0 ){
-      
-      marbles[1].first = true;
+    void setMarbleColors( int index = 0 ){
       
       for ( int i = 0; i < NUM_MARBLES; i++ ){
-         marbles[i].setColor( colorList[ i ] );
+         marbles[i].setColor( colorList[ i + index*NUM_MARBLES ] );
          marblequeue[i] = &marbles[i];
-
-         marblequeue[i]->setNextMarble( marblequeue[ (i+1) % NUM_MARBLES ] );
-         
       }
     }
 
@@ -136,29 +119,24 @@ class marbleplayer{
       current_nmarble = nmarble;
       current_marble = &marbles[ nmarble ];
     }
+    
+    //Devuelve la posicion con la canica con la que se ha chocado como puntero
+    int crashmarble(){
+      //Calcular la mas cercana de la canica activa y evaluar si se va a chocar contra ella.
+      
+      return -1;
+    }
 
     void search_crash_marble(){
-      // Define list of marbles in stripe //Against my marbles or against enemy marbles
-      
-      int n = sizeof(marblequeue) / sizeof(marblequeue[0]); 
-      qsort( marblequeue, n, sizeof(marblequeue[0]) , compareMarblePointers);
+      //memcpy ( marbles, marblequeue, sizeof( marbles ) );
+      //int n = sizeof(marblequeue) / sizeof(marblequeue[0]); 
       
       for ( int i= 0 ; i < NUM_MARBLES; i++ ){
           Serial.print( i );
           Serial.print( " - " );
           Serial.print( marbles[i].position );
           Serial.print( " - " );
-          Serial.print( marblequeue[i]->position );
-
-          Serial.print( " - " );
-          
-          Serial.print( marblequeue[(i+1) % NUM_MARBLES]->position );
-          
-          //Guardar next marble pointer in object
-          marblequeue[i]->setNextMarble( marblequeue[ (i+1) % NUM_MARBLES ] );
-          
-          Serial.print( " - " );
-          Serial.println( marbles[i].next_marble->position );
+          Serial.println( marblequeue[i]->position );
       }
     }
 };
@@ -176,7 +154,7 @@ class marblegame{
     
     bool marbleOn = true;
     uint8_t power = 50;
-    
+
     float friction = -40;
 
     float dx;
@@ -217,13 +195,7 @@ class marblegame{
     }
 
     marblegame( Adafruit_NeoPixel &marblestrip, TFTMarble &tft_screen, JoystickController &joystick ): strip( marblestrip ), tft( tft_screen ),joystick( joystick ) {
-      for ( int i = 0; i < NUM_PLAYERS; i++ ){
-          players[ num_players ].playername = String( "Player "+ String( num_players +1 ) ); // Apunta el puntero del array al objeto externo.
-
-          Serial.print( players[ num_players ].playername );
-          Serial.println( " added to the game" );
-          num_players++;
-      }
+      
     }
 
     void init(){
@@ -235,19 +207,13 @@ class marblegame{
         tft.draw_radar();
 
         //Draw Players
-        tft.drawHeader( players [current_nplayer].playername );
-
-        //Define next_marbles
+        //tft.drawHeader("Player 1");
     }
     
     //------------------Players Manager---------------------------//
-    void addPlayer( marbleplayer player, int index = 0 ){
-      //Set num_players to zero to overwrite names
-      
-      players[ index ].playername = player.playername; // Solo cambia el nombre, el objeto esta creado dentro de la clase
-
-      Serial.print( players[ index ].playername );
-      Serial.println( " added to the game" );
+    void addPlayer( marbleplayer player ){
+      players[0] = player;
+      Serial.println("Player added");
       num_players++;
     }
     
@@ -268,11 +234,10 @@ class marblegame{
       
       // Next Marble
       marblegame::set_next_marble();
-      Serial.print( " - Marble : ");
+      Serial.print( "Marble : ");
       Serial.println( players [current_nplayer].current_nmarble );
       players [current_nplayer].search_crash_marble();
     }
-    
     //----------------------Marble Manager---------------------------//
     void set_current_marble( int index = 0){
       
@@ -326,15 +291,7 @@ class marblegame{
           }
           
           // ----- Crash Detection -----//
-          if( ( players [current_nplayer].current_marble->position + round( dx ) > players [current_nplayer].current_marble->next_marble->position) && ( players [current_nplayer].current_marble->first != true) ){
-            //Serial.print(  players [current_nplayer].current_nmarble );Serial.println(" COLLISION");
-            
-            //players [current_nplayer].search_crash_marble();
-            
-            //Change to the next marble . Exception for the first marble.
-            
-            //set_next_marble( );
-          }
+
 
           
           // ----- Marble Manage ----- //

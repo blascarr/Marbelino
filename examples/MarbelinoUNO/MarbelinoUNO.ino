@@ -44,8 +44,8 @@ void setup() {
   
   tft.initR(INITR_BLACKTAB); // Tab Label for ST7735 TFT Screen (INITR_GREENTAB 0x0, INITR_REDTAB 0x1, INITR_BLACKTAB 0x2)
   game.init();
-  //game.addPlayer( blackplayer );
-  //game.addPlayer( redplayer );
+  game.addPlayer( blackplayer );
+  game.addPlayer( redplayer );
 
 }
 

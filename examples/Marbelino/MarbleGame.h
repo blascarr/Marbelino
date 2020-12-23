@@ -142,20 +142,22 @@ class marbleplayer{
       
       int n = sizeof(marblequeue) / sizeof(marblequeue[0]); 
       qsort( marblequeue, n, sizeof(marblequeue[0]) , compareMarblePointers);
-      
+
+      for ( int i= 0 ; i < NUM_MARBLES; i++ ){
+        marblequeue[i]->setNextMarble( marblequeue[ (i+1) % NUM_MARBLES ] );
+      }
       for ( int i= 0 ; i < NUM_MARBLES; i++ ){
           Serial.print( i );
           Serial.print( " - " );
           Serial.print( marbles[i].position );
-          Serial.print( " - " );
-          Serial.print( marblequeue[i]->position );
+          //Serial.print( " - " );
+          //Serial.print( marblequeue[i]->position );
 
-          Serial.print( " - " );
-          
-          Serial.print( marblequeue[(i+1) % NUM_MARBLES]->position );
+          //Serial.print( " - " );
+          //Serial.print( marblequeue[(i+1) % NUM_MARBLES]->position );
           
           //Guardar next marble pointer in object
-          marblequeue[i]->setNextMarble( marblequeue[ (i+1) % NUM_MARBLES ] );
+          //marblequeue[i]->setNextMarble( marblequeue[ (i+1) % NUM_MARBLES ] );
           
           Serial.print( " - " );
           Serial.println( marbles[i].next_marble->position );

@@ -99,6 +99,17 @@ int compareMarblePointers_ASC(const void * a, const void * b)
   return  ( pa->position < pb->position );
 }
 
+class hole{
+  public:
+    int position = 0;
+    bool isgood = true;
+    
+    hole( int pos , bool glory ): position( pos ), isgood( glory ) {
+      
+    }
+    
+};
+
 class marbleplayer{
   public:
 
@@ -229,12 +240,19 @@ class marblegame{
     int T_MIN_VALUE = 30;
     int T_MAX_VALUE = 300;
 
+    
+    //----- Wind Controller -----//
+    uint16_t wind_force = 0;
+    uint16_t wind_angle = 0;
+    
+    
     marbleplayer players[ NUM_PLAYERS ];
     
     marbleplayer& current_player ;
     uint8_t current_nplayer = 0;
     uint8_t num_players = 0;
 
+    
     marblegame(){
     
     }
@@ -254,9 +272,6 @@ class marblegame{
           for ( int j = 0; j < NUM_MARBLES; j++ ){
               //Set order position for each marble under cero for first launch
               
-              //No ejecuta bien la suma de numeros negativos en el segundo lanzamiento
-              // players[ i ].marbles[j].position = (i*NUM_MARBLES+j)*(-1);
-              
               // Asociamos inicialmente puntero a las canicas por orden de aparicion 
               overqueue[i*NUM_MARBLES+j] = &(players[ i ].marbles[j]); 
           }  
@@ -270,10 +285,12 @@ class marblegame{
         
         // Draw Radar Interface
         tft.draw_radar();
-
-        //Draw Players. Start with next player
+        wind_force = random( 100 );
+        tft.draw_wind_force( wind_force );
+        
+        //Start with next player
         current_nplayer = NUM_PLAYERS-1;
-
+        
         //Set Marble colors for each player
         //For thinner range subdivide in more parts. Default 6 for RED - YELLOW - GREEN - CYAN - BLUE - MAGENTA
         uint8_t HSV_divisor = 6;
@@ -302,9 +319,6 @@ class marblegame{
             uint32_t rgbcolor = strip.ColorHSV( ( j*marbleRange + colorOffset )% 65536  );
             players[ i ].marbles[j].setColor( rgbcolor );
             
-            //Set order position for each marble under cero for first launch
-            //players[ i ].marbles[j].position = (i*NUM_MARBLES+j)*(-1);
-            
             //Establecemos la configuracion inicial a la siguiente canica en la lista
             
             int index = ( (i*NUM_MARBLES+j-1) < 0 )? ( index = i + NUM_MARBLES *NUM_PLAYERS -1 ):( index = (i*NUM_MARBLES+j-1) );
@@ -315,6 +329,11 @@ class marblegame{
         
         // Set first matble with true value, for control over other marbles
         players[ 0 ].marbles[ 0 ].firstinstrip = true;
+
+        //Draw Players. 
+        for ( int i = 0; i < NUM_PLAYERS; i++ ){
+          tft.draw_marble( players[i].marbles[0].color, i );
+        }
         
     }
     
@@ -328,10 +347,6 @@ class marblegame{
       Serial.println( " added to the game" );
       num_players++;
     }
-    
-    void setPlayer(){
-      
-    }
 
     void changePlayer( int index = 0 ){
       
@@ -341,6 +356,7 @@ class marblegame{
       current_nplayer = ( current_nplayer == (int)(NUM_PLAYERS -1) ) ? 0: current_nplayer+1 ;
       Serial.print( "Player : ");
       Serial.print( players [current_nplayer].playername );
+      
       //Draw name o Top
       tft.drawHeader( players [current_nplayer].playername );
       
@@ -352,8 +368,8 @@ class marblegame{
     }
     
     //----------------------Marble Manager---------------------------//
-    void set_current_marble( int index = 0){
-      //players [ index ].nextMarble();
+    void set_current_marble( int index  ){
+      players[current_nplayer].current_marble = &players[current_nplayer].marbles[index];
     }
 
     void set_next_marble( ){
@@ -380,7 +396,9 @@ class marblegame{
       overqueue[0]-> firstinstrip = true;
       overqueue[1]-> firstinstrip = false;
       
-      /*for ( int i= 0 ; i < NUM_MARBLES*NUM_PLAYERS; i++ ){
+      /*
+      #ifdef DEBUG
+       for ( int i= 0 ; i < NUM_MARBLES*NUM_PLAYERS; i++ ){
           int index = ( (i-1) < 0 )? ( index = i + NUM_MARBLES *NUM_PLAYERS -1 ):( index = ( i-1 ) );
           Serial.print( i );
           Serial.print( " - \t" );
@@ -392,47 +410,16 @@ class marblegame{
           Serial.print( overqueue[i]->position );
           Serial.print( " - \t" );
           Serial.println( overqueue[index]->position );        
-      }*/
+       }
+      #endif
+      */
     }
 
-    void is_over_marble( int playerindex, int marbleindex ){
+    void shift_over_marble( ){
+      #ifdef DEBUG
+        Serial.println( "OVERMARBLE - ");
+      #endif
       search_over_marble();
-      int i = playerindex*NUM_MARBLES+marbleindex;
-      /*Serial.println("SEARCH");
-      Serial.print( i );
-      Serial.print( " - " );
-      Serial.print( overqueue[i]->position );
-      Serial.print( " - " );
-      Serial.println( overqueue[i]->over_marble->position );*/
-          
-    }
-
-    void shift_over_marble( int playerindex, int marbleindex ){
-      Serial.println( "OVERMARBLE - ");
-      search_over_marble();
-      /*Serial.print( playerindex );
-      Serial.print( " - \t" );
-      Serial.print( marbleindex);
-      Serial.print( " - \t" );
-      Serial.println( ( playerindex*NUM_MARBLES + marbleindex ) );*/
-      /*marble* next_over = players[ playerindex ].marbles[ marbleindex ].over_marble->over_marble;
-      
-      players[ playerindex ].marbles[ marbleindex ].over_marble->setOverMarble( overqueue[ ( playerindex*NUM_MARBLES + marbleindex ) ] );
-      players[ playerindex ].marbles[ marbleindex ].setOverMarble(  next_over  );
-      
-      for ( int i= 0 ; i < NUM_MARBLES*NUM_PLAYERS; i++ ){
-          int index = ( (i-1) < 0 )? ( index = i + NUM_MARBLES *NUM_PLAYERS -1 ):( index = ( i-1 ) );
-          Serial.print( i );
-          Serial.print( " - \t" );
-          Serial.print( players[i/NUM_MARBLES].marbles[i%NUM_MARBLES].position );
-          Serial.print( " - \t" );
-          Serial.print( players[i/NUM_MARBLES].marbles[i%NUM_MARBLES].over_marble->position );
-          
-          Serial.print( " - \t" );
-          Serial.print( overqueue[i]->position );
-          Serial.print( " - \t" );
-          Serial.println( overqueue[index]->position );       
-      }*/
     }
     
     //------------------LED Movement Manager---------------------------//
@@ -443,13 +430,15 @@ class marblegame{
           
           //dt =  (long) ( millis() - timestamp );
           
+          // ----- Timer Control -----//
           //Same intervals between calculations for realistic effect
           dt = calc_interval;
           timeInterval += tg*dt/1000;
           ( timeInterval > T_MAX_VALUE)? T_MAX_VALUE : timeInterval;
           
           timestamp = millis();
-    
+          
+          // ----- LED Physics -----//
           dx = v * dt/(float)1000 + 0.5 * friction * pow( dt/(float)1000 , 2.0 );
           v = v + friction*dt/(float)1000;
 
@@ -463,8 +452,6 @@ class marblegame{
             Serial.print(0.5 * friction * pow( dt/(float)1000 , 2.0 ) );
             Serial.print( "," );
             Serial.print( round( dx ) );
-            //Serial.print( "," );
-            //Serial.print( position );
             Serial.print( "," );
             Serial.print( timeInterval );
             Serial.println();
@@ -474,72 +461,68 @@ class marblegame{
             marbleOn = false;
             return;
           }
-
+          
+          marble* current_marble = players [current_nplayer].current_marble;
+          marble* next_marble = players [current_nplayer].current_marble->next_marble;
+          
           // Marble return to the Beginning of the strip
-          if(  players [current_nplayer].current_marble->oldPosition > players [current_nplayer].current_marble->position ){
-            players [current_nplayer].current_marble->first = false;
-            //players [current_nplayer].current_marble->next_marble->first = true;
+          if(  current_marble->oldPosition > current_marble->position ){
+            current_marble->first = false;
           }
           
-          // ----- Crash Detection -----//
-          if( ( players [current_nplayer].current_marble->position + round( dx ) >= players [current_nplayer].current_marble->next_marble->position) && ( players [current_nplayer].current_marble->first != true) ){
+          // ----- Crash Detection with other marbles -----//
+          if( ( current_marble->position + round( dx ) >= next_marble->position ) && ( current_marble->first != true) ){
             Serial.print(  players [current_nplayer].current_nmarble );Serial.println(" COLLISION");
             
             //LED ON position -1 for bounce
-            players [current_nplayer].current_marble->oldPosition = players [current_nplayer].current_marble->position;
-            players [current_nplayer].current_marble->position = players [current_nplayer].current_marble->next_marble->position -1;
+            current_marble->oldPosition = current_marble->position;
+            current_marble->position = next_marble->position -1;
             
             //-------- Draw Marble ---------//
-            if( players [current_nplayer].current_marble->oldPosition !=  ( players [current_nplayer].current_marble->next_marble->position -1) ){
-              strip.setPixelColor( players [current_nplayer].current_marble->oldPosition, strip.Color(0, 0, 0) );
+            if( current_marble->oldPosition !=  ( next_marble->position -1) ){
+              strip.setPixelColor( current_marble->oldPosition, strip.Color(0, 0, 0) );
               strip.show();
-              strip.setPixelColor( players [current_nplayer].current_marble->position , players [current_nplayer].current_marble->color  );
+              strip.setPixelColor( current_marble->position , current_marble->color  );
               strip.show();
             }
           
             //Change to the next marble . Exception for the first marble.
-            bounce_to_marble( players [current_nplayer].current_marble->next_marble );
+            bounce_to_marble( next_marble );
             players [current_nplayer].search_crash_marble();
           }else{
             
-          }
-          
-          // ----- Marble Manage ----- //
-
-          players [current_nplayer].current_marble->oldPosition = players [current_nplayer].current_marble->position;
-          players [current_nplayer].current_marble->position += round( dx );
-          // Back to the origin
-          if( players [current_nplayer].current_marble->position > NUM_LEDS_PER_STRIP ){
-            players [current_nplayer].current_marble->position = players [current_nplayer].current_marble->position - NUM_LEDS_PER_STRIP ;
-          }
-
-          //-------- Refresh Over Marble ---------//
-          // If position is over other marble... No paint or next position.
-          
-          // If position is greater than over_marble. Search and reconfigure.
-          if ( ( players [current_nplayer].current_marble->position > players [current_nplayer].current_marble->over_marble->position) && players [current_nplayer].current_marble->firstinstrip != true ){
+            // ----- Standard Marble Manager ----- //
+  
+            current_marble->oldPosition = current_marble->position;
+            current_marble->position += round( dx );
             
-            shift_over_marble( current_nplayer , players [current_nplayer].current_nmarble );
-          }
-          
-          //search_over_marble( players [current_nplayer].current_marble );
-          if ( players [current_nplayer].current_marble->position == players [current_nplayer].current_marble->over_marble->position ){
+            // Back to the origin
+            if( current_marble->position > NUM_LEDS_PER_STRIP ){
+              current_marble->position = ( current_marble->position -1 ) % NUM_LEDS_PER_STRIP ;
+            }
+  
+            //-------- Refresh Over Marble ---------//
             
-            // Increase +1 for position over the last marble
-            players [current_nplayer].current_marble->position ++;
+            // If position is greater than over_marble. Search and reconfigure.
+            if ( ( current_marble->position >= current_marble->over_marble->position ) && current_marble->firstinstrip == false ){
+              
+              shift_over_marble(  );
+              if ( current_marble->position == current_marble->over_marble->position ){
+                current_marble->position ++;
+              }
+            }
+            
+            //-------- Draw Marble ---------//
 
-            shift_over_marble( current_nplayer , players [current_nplayer].current_nmarble );
-            //is_over_marble( current_nplayer, players [current_nplayer].current_nmarble );
+            strip.setPixelColor( current_marble->oldPosition, strip.Color(0, 0, 0) );
+            strip.show();
+            strip.setPixelColor( current_marble->position , current_marble->color  );
+            strip.show();
           }
           
-          //-------- Draw Marble ---------//
-          
-          // Parece que rebota, pero simplemente es que al ser del mismo color y pasar por encima, da ese efecto. Cambio de colores para cada jugador
-          strip.setPixelColor( players [current_nplayer].current_marble->oldPosition, strip.Color(0, 0, 0) );
-          strip.show();
-          strip.setPixelColor( players [current_nplayer].current_marble->position , players [current_nplayer].current_marble->color  );
-          strip.show();
-
+          #ifdef MEMORY_DEBUG
+            Serial.println( freeMemory()  );
+          #endif
         }
       }
     }
@@ -563,11 +546,11 @@ class marblegame{
     void update_wind(){
       if ( millis()- wind_time > wind_interval ) {
         wind_time = millis();
-
-        tft.draw_wind_arrow();
-        #ifdef MEMORY_DEBUG
-          Serial.println( freeMemory()  );
-        #endif
+ 
+        tft.draw_wind_arrow( );
+        
+        wind_angle = tft.current_arrow_angle;
+        wind_angle %= 360;
       }
     }
 
@@ -582,7 +565,7 @@ class marblegame{
             marblegame::launch( power );
             //Change Player and Next Marble
             marblegame::nextPlayer();
-            marblegame::is_over_marble( current_nplayer, players [current_nplayer].current_nmarble );
+            marblegame::search_over_marble();
         } 
       }
     }
@@ -603,6 +586,13 @@ class marblegame{
       impulse(power);
       timestamp = millis();
       timeInterval = T_MIN_VALUE;
+      
+      wind_force = random(100);
+      tft.draw_wind_force( wind_force );
+      
+      for ( int i = 0; i < NUM_PLAYERS; i++ ){
+        tft.draw_marble( players[i].marbles[0].color, i );
+      }
     }
 
     void set_wind_time ( int duration ){

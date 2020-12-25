@@ -51,6 +51,7 @@ class marble{
     int oldPosition = 0;
     int position = 0;
     marble* next_marble;
+    marble* over_marble;
     bool first = false;
     bool last = false;
         
@@ -73,6 +74,10 @@ class marble{
     void setNextMarble( marble* marble ){
       next_marble = marble;
     }
+
+    void setOverMarble( marble* marble ){
+      over_marble = marble;
+    }
 };
 
 int compareMarbleOrder (const void * a, const void * b)
@@ -80,11 +85,18 @@ int compareMarbleOrder (const void * a, const void * b)
   return ( *(marble*)a - *(marble*)b );
 }
 
-int compareMarblePointers(const void * a, const void * b)
+int compareMarblePointers_DESC(const void * a, const void * b)
 {
   const marble* pa = *( const marble ** )a;
   const marble* pb = *( const marble ** )b;
   return  ( pa->position > pb->position );
+}
+
+int compareMarblePointers_ASC(const void * a, const void * b)
+{
+  const marble* pa = *( const marble ** )a;
+  const marble* pb = *( const marble ** )b;
+  return  ( pa->position < pb->position );
 }
 
 class marbleplayer{
@@ -105,13 +117,11 @@ class marbleplayer{
 
     marbleplayer( ){
       init_marbles( num_player );
-      //current_marble = &marbles[ NUM_MARBLES -1 ];
     }
     
     marbleplayer( String name ){
       playername = name;
       init_marbles( num_player );
-      //current_marble = &marbles[ NUM_MARBLES -1 ];
     }
 
     //----- Marble Manager -----//
@@ -145,7 +155,7 @@ class marbleplayer{
       // Define list of marbles in stripe //Against my marbles or against enemy marbles
       
       int n = sizeof(marblequeue) / sizeof(marblequeue[0]); 
-      qsort( marblequeue, n, sizeof(marblequeue[0]) , compareMarblePointers);
+      qsort( marblequeue, n, sizeof(marblequeue[0]) , compareMarblePointers_DESC);
 
       //Guardar next marble pointer in object
       for ( int i= 0 ; i < NUM_MARBLES; i++ ){
@@ -157,8 +167,8 @@ class marbleplayer{
           marbles[ i ].first = false;
       }
       marblequeue[ NUM_MARBLES -1 ]->first = true;
-      
-      for ( int i= 0 ; i < NUM_MARBLES; i++ ){
+
+      /*for ( int i= 0 ; i < NUM_MARBLES; i++ ){
           Serial.print( i );
           Serial.print( " - " );
           Serial.print( marbles[i].position );
@@ -173,7 +183,7 @@ class marbleplayer{
           Serial.print( " - " );
           Serial.println( marbles[i].first );
 
-      }
+      }*/
     }
 };
 
@@ -187,6 +197,8 @@ class marblegame{
     Adafruit_NeoPixel& strip;
     JoystickController& joystick;
     TFTMarble& tft;
+
+    marble* overqueue[ NUM_MARBLES*NUM_PLAYERS ];
     
     bool marbleOn = true;
     uint8_t power = 50;
@@ -237,6 +249,16 @@ class marblegame{
           Serial.print( players[ num_players ].playername );
           Serial.println( " added to the game" );
           num_players++;
+
+          for ( int j = 0; j < NUM_MARBLES; j++ ){
+              //Set order position for each marble under cero for first launch
+              
+              //No ejecuta bien la suma de numeros negativos en el segundo lanzamiento
+              // players[ i ].marbles[j].position = (i*NUM_MARBLES+j)*(-1);
+              
+              // Asociamos inicialmente puntero a las canicas por orden de aparicion 
+              overqueue[i*NUM_MARBLES+j] = &(players[ i ].marbles[j]); 
+          }  
       }
     }
 
@@ -248,10 +270,44 @@ class marblegame{
         // Draw Radar Interface
         tft.draw_radar();
 
-        //Draw Players
-        tft.drawHeader( players [current_nplayer].playername );
-
-        //Define next_marbles
+        
+        //Draw Players. Start with next player
+        current_nplayer = NUM_PLAYERS-1;
+        
+        for ( int i = 0; i < NUM_PLAYERS; i++ ){
+          
+          for ( int j = 0; j < NUM_MARBLES; j++ ){
+            //Set Marble colors for each player
+            /*uint32_t rangeColor = 65536/6;
+            float marbleRange = rangeColor/NUM_MARBLES;
+            uint32_t colorOffset = -30*65536/360;
+            uint32_t rgbcolor = strip.ColorHSV( j*marbleRange - colorOffset + rangeColor*i );
+            
+            Serial.print(j*marbleRange - colorOffset + rangeColor*i);
+            Serial.print(" - ");
+            Serial.println( rgbcolor );
+            players[ i ].marbles[j].setColor( rgbcolor );*/
+            players[ i ].marbles[j].setColor( colorList[ i*NUM_MARBLES + j ] );
+            
+            //Set order position for each marble under cero for first launch
+            //players[ i ].marbles[j].position = (i*NUM_MARBLES+j)*(-1);
+            
+            //Establecemos la configuracion inicial a la siguiente canica en la lista
+            
+            int index = ( (i*NUM_MARBLES+j-1) < 0 )? ( index = i + NUM_MARBLES *NUM_PLAYERS -1 ):( index = (i*NUM_MARBLES+j-1) );
+            players[ i ].marbles[j].setOverMarble( overqueue[ index ] );
+            
+          }  
+        } 
+        /*Serial.println(" | ");
+        
+        for ( int i = 0; i < NUM_PLAYERS*NUM_MARBLES ; i++ ){
+          Serial.print(i);
+          Serial.print(" - ");
+          Serial.print( overqueue[i]->position );
+          Serial.print( " - " );
+          Serial.println( overqueue[i]->over_marble->position );
+        }*/
         
     }
     
@@ -290,7 +346,7 @@ class marblegame{
     
     //----------------------Marble Manager---------------------------//
     void set_current_marble( int index = 0){
-      //players [current_nplayer].nextMarble();
+      //players [ index ].nextMarble();
     }
 
     void set_next_marble( ){
@@ -301,7 +357,54 @@ class marblegame{
       players [current_nplayer].current_marble = next;
     }
 
+    void search_over_marble(){
+      
+      int n = sizeof(overqueue) / sizeof(overqueue[0]); 
+      qsort( overqueue, n, sizeof(overqueue[0]) , compareMarblePointers_ASC);
 
+      //Guardar over marble pointer in object
+      for ( int i= 0 ; i < NUM_MARBLES*NUM_PLAYERS; i++ ){
+        
+        int index = ( (i-1) < 0 )? ( index = i + NUM_MARBLES *NUM_PLAYERS -1 ):( index = ( i-1 ) );
+        overqueue[i]->setOverMarble( overqueue[ index ] );
+        //players[ i/NUM_MARBLES ].marbles[ i%NUM_MARBLES ].setOverMarble( overqueue[ index ] );
+      }
+
+      for ( int i= 0 ; i < NUM_MARBLES*NUM_PLAYERS; i++ ){
+        int index = ( (i-1) < 0 )? ( index = i + NUM_MARBLES *NUM_PLAYERS -1 ):( index = ( i-1 ) );
+          Serial.print( i );
+          Serial.print( " - " );
+          Serial.print( players[i/NUM_MARBLES].marbles[i%NUM_MARBLES].position );
+          Serial.print( " - " );
+          Serial.print( players[i/NUM_MARBLES].marbles[i%NUM_MARBLES].over_marble->position );
+          
+          Serial.print( " - " );
+          Serial.print( overqueue[i]->position );
+          Serial.print( " - " );
+          Serial.println( overqueue[index]->position );
+          //Serial.print( " - " );
+          //Serial.println( overqueue[i]->over_marble->position );
+          //Serial.print( marblequeue[i]->position );            
+          
+      }
+    }
+
+    void is_over_marble( int playerindex, int marbleindex ){
+      search_over_marble();
+      int i = playerindex*NUM_MARBLES+marbleindex;
+      /*Serial.println("SEARCH");
+      Serial.print( i );
+      Serial.print( " - " );
+      Serial.print( overqueue[i]->position );
+      Serial.print( " - " );
+      Serial.println( overqueue[i]->over_marble->position );*/
+          
+    }
+
+    void shift_over_marble( int playerindex, int marbleindex ){
+      Serial.println( "OVERMARBLE");
+    }
+    
     //------------------LED Movement Manager---------------------------//
     void update_strip(){
       if ( marbleOn ){
@@ -331,8 +434,8 @@ class marblegame{
             Serial.print(0.5 * friction * pow( dt/(float)1000 , 2.0 ) );
             Serial.print( "," );
             Serial.print( round( dx ) );
-            Serial.print( "," );
-            Serial.print( Position );
+            //Serial.print( "," );
+            //Serial.print( position );
             Serial.print( "," );
             Serial.print( timeInterval );
             Serial.println();
@@ -376,19 +479,31 @@ class marblegame{
 
           players [current_nplayer].current_marble->oldPosition = players [current_nplayer].current_marble->position;
           players [current_nplayer].current_marble->position += round( dx );
-          
+          // Back to the origin
           if( players [current_nplayer].current_marble->position > NUM_LEDS_PER_STRIP ){
             players [current_nplayer].current_marble->position = players [current_nplayer].current_marble->position - NUM_LEDS_PER_STRIP ;
           }
 
-          //-------- Draw Marble ---------//
-          strip.setPixelColor( players [current_nplayer].current_marble->oldPosition, strip.Color(0, 0, 0) );
-          strip.show();
-          strip.setPixelColor( players [current_nplayer].current_marble->position , players [current_nplayer].current_marble->color  );
-          strip.show();
-
           //-------- Refresh Over Marble ---------//
+          // If position is over other marble... No paint or next position.
+          //search_over_marble( players [current_nplayer].current_marble );
+          if ( players [current_nplayer].current_marble->position == players [current_nplayer].current_marble->over_marble->position ){
+            
+            shift_over_marble( current_nplayer , players [current_nplayer].current_nmarble );
+            players [current_nplayer].current_marble->position ++;
+            //is_over_marble( current_nplayer, players [current_nplayer].current_nmarble );
+          }
+            //-------- Draw Marble ---------//
+            
+            // Parece que rebota, pero simplemente es que al ser del mismo color y pasar por encima, da ese efecto. Cambio de colores para cada jugador
+            strip.setPixelColor( players [current_nplayer].current_marble->oldPosition, strip.Color(0, 0, 0) );
+            strip.show();
+            strip.setPixelColor( players [current_nplayer].current_marble->position , players [current_nplayer].current_marble->color  );
+            strip.show();
+
         }
+
+        
       }
     }
 
@@ -430,6 +545,7 @@ class marblegame{
             marblegame::launch( power );
             //Change Player and Next Marble
             marblegame::nextPlayer();
+            marblegame::is_over_marble( current_nplayer, players [current_nplayer].current_nmarble );
         } 
       }
     }

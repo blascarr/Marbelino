@@ -15,7 +15,7 @@
 Adafruit_NeoPixel stripe = Adafruit_NeoPixel(NUM_LEDS_PER_STRIP, PIN, NEO_GRB + NEO_KHZ800);
 
 //----- MARBLE GAME Configuration -----//
-#define NUM_PLAYERS 1
+#define NUM_PLAYERS 2
 #define NUM_MARBLES 3 //Marbles each player
 
 //----- JOYSTICK Configuration -----//
@@ -32,9 +32,6 @@ TFTMarble tft = TFTMarble(cs, dc, rst);
 
 JoystickController joy = JoystickController( joystick_X , joystick_Y ,  joystick_C );
 
-marbleplayer blackplayer("BLACKPEN");
-marbleplayer redplayer("REDPEN");
-
 marblegame game( stripe, tft, joy );
 
 
@@ -44,8 +41,6 @@ void setup() {
   
   tft.initR(INITR_BLACKTAB); // Tab Label for ST7735 TFT Screen (INITR_GREENTAB 0x0, INITR_REDTAB 0x1, INITR_BLACKTAB 0x2)
   game.init();
-  //game.addPlayer( blackplayer );
-  //game.addPlayer( redplayer );
 
 }
 

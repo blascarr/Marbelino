@@ -15,7 +15,7 @@
 Adafruit_NeoPixel stripe = Adafruit_NeoPixel(NUM_LEDS_PER_STRIP, PIN, NEO_GRB + NEO_KHZ800);
 
 //----- MARBLE GAME Configuration -----//
-#define NUM_PLAYERS 2
+#define NUM_PLAYERS 2 //Fail for Players >= 3
 #define NUM_MARBLES 3 //Marbles each player
 
 //----- JOYSTICK Configuration -----//

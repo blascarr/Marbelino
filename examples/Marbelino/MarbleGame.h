@@ -273,21 +273,34 @@ class marblegame{
         
         //Draw Players. Start with next player
         current_nplayer = NUM_PLAYERS-1;
+
+        //Set Marble colors for each player
+        //For thinner range subdivide in more parts. Default 6 for RED - YELLOW - GREEN - CYAN - BLUE - MAGENTA
+        uint8_t HSV_divisor = 6;
+        
+        uint16_t rangeColor = 65535/HSV_divisor;
+        uint16_t marbleRange = rangeColor/NUM_MARBLES;
+        
+        // Fitst Color Offset for range in HSV Values
+        /*
+        // RED  -10
+        // YELLOW  50
+        // GREEN  110
+        // CYAN  170
+        // BLUE  230
+        // MAGENTA  290
+        */
+        
+        int offset = 110;
         
         for ( int i = 0; i < NUM_PLAYERS; i++ ){
           
+          uint16_t colorOffset = ( ( ((360+offset)%360)*65535/360) + 65535*i/NUM_PLAYERS );
+          
           for ( int j = 0; j < NUM_MARBLES; j++ ){
             //Set Marble colors for each player
-            /*uint32_t rangeColor = 65536/6;
-            float marbleRange = rangeColor/NUM_MARBLES;
-            uint32_t colorOffset = -30*65536/360;
-            uint32_t rgbcolor = strip.ColorHSV( j*marbleRange - colorOffset + rangeColor*i );
-            
-            Serial.print(j*marbleRange - colorOffset + rangeColor*i);
-            Serial.print(" - ");
-            Serial.println( rgbcolor );
-            players[ i ].marbles[j].setColor( rgbcolor );*/
-            players[ i ].marbles[j].setColor( colorList[ i*NUM_MARBLES + j ] );
+            uint32_t rgbcolor = strip.ColorHSV( ( j*marbleRange + colorOffset )% 65536  );
+            players[ i ].marbles[j].setColor( rgbcolor );
             
             //Set order position for each marble under cero for first launch
             //players[ i ].marbles[j].position = (i*NUM_MARBLES+j)*(-1);
@@ -373,16 +386,16 @@ class marblegame{
       for ( int i= 0 ; i < NUM_MARBLES*NUM_PLAYERS; i++ ){
         int index = ( (i-1) < 0 )? ( index = i + NUM_MARBLES *NUM_PLAYERS -1 ):( index = ( i-1 ) );
           Serial.print( i );
-          Serial.print( " - " );
+          Serial.print( " - \t" );
           Serial.print( players[i/NUM_MARBLES].marbles[i%NUM_MARBLES].position );
-          Serial.print( " - " );
+          Serial.print( " - \t" );
           Serial.print( players[i/NUM_MARBLES].marbles[i%NUM_MARBLES].over_marble->position );
           
-          Serial.print( " - " );
+          Serial.print( " - \t" );
           Serial.print( overqueue[i]->position );
-          Serial.print( " - " );
+          Serial.print( " - \t" );
           Serial.println( overqueue[index]->position );
-          //Serial.print( " - " );
+          //Serial.print( " - \t" );
           //Serial.println( overqueue[i]->over_marble->position );
           //Serial.print( marblequeue[i]->position );            
           
@@ -493,13 +506,14 @@ class marblegame{
             players [current_nplayer].current_marble->position ++;
             //is_over_marble( current_nplayer, players [current_nplayer].current_nmarble );
           }
-            //-------- Draw Marble ---------//
-            
-            // Parece que rebota, pero simplemente es que al ser del mismo color y pasar por encima, da ese efecto. Cambio de colores para cada jugador
-            strip.setPixelColor( players [current_nplayer].current_marble->oldPosition, strip.Color(0, 0, 0) );
-            strip.show();
-            strip.setPixelColor( players [current_nplayer].current_marble->position , players [current_nplayer].current_marble->color  );
-            strip.show();
+          
+          //-------- Draw Marble ---------//
+          
+          // Parece que rebota, pero simplemente es que al ser del mismo color y pasar por encima, da ese efecto. Cambio de colores para cada jugador
+          strip.setPixelColor( players [current_nplayer].current_marble->oldPosition, strip.Color(0, 0, 0) );
+          strip.show();
+          strip.setPixelColor( players [current_nplayer].current_marble->position , players [current_nplayer].current_marble->color  );
+          strip.show();
 
         }
 

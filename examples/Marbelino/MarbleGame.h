@@ -147,11 +147,9 @@ int compareMarblePointers_ASC(const void * a, const void * b)
   return  ( pa->position < pb->position );
 }
 
-int compareHolePointers_ASC(const void * a, const void * b)
+int compareHolePointers_ASC (const void * a, const void * b)
 {
-  const hole* pa = *( const hole ** )a;
-  const hole* pb = *( const hole ** )b;
-  return  ( pa->position > pb->position );
+  return ( *(hole*)a - *(hole*)b );
 }
 
 class marbleplayer{
@@ -255,8 +253,6 @@ class marblegame{
     TFTMarble& tft;
 
     marble* overqueue[ NUM_MARBLES*NUM_PLAYERS ];
-    hole* overholes[ NHOLES ];
-    hole* overfailholes[ NFAILHOLES ];
     
     bool marbleOn = true;
     int power = 50;
@@ -311,10 +307,10 @@ class marblegame{
     int nfailhole = 0;
     uint8_t hole_sat = 255;
     uint16_t hole_cos = 0;
-    hole holes[ NHOLES ];
+    hole holes[ NHOLES + NFAILHOLES ];
     
-    uint16_t failhole_cos = 0;
-    hole failholes[ NFAILHOLES ];
+    //uint16_t failhole_cos = 0;
+    //hole failholes[ NFAILHOLES ];
     
     marblegame(){
     
@@ -354,19 +350,22 @@ class marblegame{
         current_nplayer = NUM_PLAYERS-1;
 
         //---Paint Holes in Strip
-        for ( int i = 0; i < NHOLES; i++ ){
-              uint32_t rgbcolor = strip.ColorHSV( 65536/3  );
-              holes[i].set_position( random( NUM_LEDS_PER_STRIP ) );
+        uint8_t holeRange = NUM_LEDS_PER_STRIP/(NHOLES + NFAILHOLES);
+        for ( int i = 0; i < NHOLES + NFAILHOLES; i++ ){
+              uint32_t rgbcolor;
+              holes[i].set_position( random( i*holeRange, (i+1)*holeRange ) );
+
+              //Los primeros van a ser win y los ultimos Fail
+              if ( i < NHOLES ){
+                rgbcolor = strip.ColorHSV( 65536/3  );
+                
+              }else{
+                rgbcolor = strip.ColorHSV( 0  );
+                holes[i].isgood = false;
+              }
               holes[i].set_color( rgbcolor );
-              overholes[i]  = &holes[i];
         }
 
-        for ( int i = 0; i < NFAILHOLES; i++ ){
-              uint32_t rgbcolor = strip.ColorHSV( 0  );
-              failholes[i].set_position( random( NUM_LEDS_PER_STRIP ) );
-              failholes[i].set_color( rgbcolor );
-              overfailholes[ i ]  = &failholes[i];
-        }
 
         //List overhole has now in first place good holes and failholes in the back
         //Init order in holequeue
@@ -406,7 +405,7 @@ class marblegame{
             players[ i ].marbles[j].setOverMarble( overqueue[ index ] );
 
             //Relacionar todas las canicas con el primer hole de la lista.
-            players[ i ].marbles[j].setOverHole( overholes[ 0 ] );
+            players[ i ].marbles[j].setOverHole( &holes[ 0 ] );
             
           }  
         }
@@ -498,52 +497,31 @@ class marblegame{
     }
 
     void search_over_hole(){
-      int n = sizeof(overholes) / sizeof(overholes[0]); 
-      qsort( overholes, n, sizeof(overholes[0]) , compareHolePointers_ASC );
+      int n = sizeof(holes) / sizeof(holes[0]); 
+      qsort( holes, n, sizeof(holes[0]) , compareHolePointers_ASC );
 
       // Define next holes for each element
       //Guardar over Hole pointer in object
-      for ( int i= 0 ; i < NHOLES ; i++ ){
-        int index = (i+1)%NHOLES;
-
-        overholes[i]->setOverHole( overholes[ index ] );
-      }
-
-      //Guardar over FAIL Hole pointer in object
-      int nf = sizeof(overfailholes) / sizeof(overfailholes[0]); 
-      qsort( overfailholes, nf, sizeof(overfailholes[0]) , compareHolePointers_ASC );
-
-      for ( int i= 0 ; i < NFAILHOLES; i++ ){
-        int index = (i+1)%NFAILHOLES;
-        overfailholes[i]->setOverHole( overfailholes[ index ] );
+      for ( int i= 0 ; i < n ; i++ ){
+        int index = (i+1)%n;
+        holes[i].setOverHole( &holes[ index ] );
       }
       
-      /*Serial.println();
-       for ( int i= 0 ; i < NHOLES; i++ ){
-        int index = (i+1)%NHOLES;
-          //int index = ( (i-1) < 0 )? ( index = i + NHOLES -1 ):( index = ( i-1 ) );
+      Serial.println();
+       for ( int i= 0 ; i < n ; i++ ){
+          int index = (i+1)%( n );
+          //int index = ( (i-1) < 0 )? ( index = i + n -1 ):( index = ( i-1 ) );
           Serial.print( i );         
           Serial.print( " - \t" );
           Serial.print( index );
           Serial.print( " - \t" );
-          Serial.print( overholes[i]->position );
+          Serial.print( holes[i].position );
           Serial.print( " - \t" );
-          Serial.println( overholes[i]->next_hole->position );        
+          Serial.print( holes[i].next_hole->position );  
+          Serial.print( " - \t" );
+          Serial.println( holes[i].isgood );       
        }
-        Serial.println();
-       for ( int i= 0 ; i < NFAILHOLES; i++ ){
-        int index = (i+1)%NFAILHOLES;
-          //int index = ( (i-1) < 0 )? ( index = i + NFAILHOLES -1 ):( index = ( i-1 ) );
-          Serial.print( i );         
-          Serial.print( " - \t" );
-          Serial.print( index );
-          Serial.print( " - \t" );
-          Serial.print( overfailholes[i]->position );
-          Serial.print( " - \t" );
-          Serial.println( overfailholes[i]->next_hole->position );        
-       }
-       */
-
+       
     }
     
     void shift_over_marble( ){
@@ -587,8 +565,9 @@ class marblegame{
             Serial.print( timeInterval );
             Serial.println();
           #endif
-          
-          if ( round(dx) <= 0 ){
+
+          //Clean bad values under zero
+          if ( round(dx) < 0 ){
             marbleOn = false;
             return;
           }
@@ -600,72 +579,85 @@ class marblegame{
           if(  current_marble->oldPosition > current_marble->position ){
             current_marble->first = false;
           }
+
+          //-------- Detect Over Holes ---------//
+
+          if ( ( current_marble->position  == current_marble->over_hole->position ) && ( round( dx ) == 0 ) ) {
+            Serial.println( "TAKEN");
+            current_marble->inHole = true;
+            marbleOn = false;
+            
+            //Detect if hole or failhole
+            players [current_nplayer].points += 5;
+            current_marble->over_hole->take();
+            //Define new Holes, quit the hole
+            
+          }
+
+          if ( round(dx) == 0 ){
+            marbleOn = false;
+            return;
+          }
           
           // ----- Crash Detection with other marbles -----//
           if( ( current_marble->position + round( dx ) >= next_marble->position ) && ( current_marble->first != true) ){
-            Serial.print(  players [current_nplayer].current_nmarble );Serial.println(" COLLISION");
+              Serial.print(  players [current_nplayer].current_nmarble );Serial.println(" COLLISION");
             
-            //LED ON position -1 for bounce
-            current_marble->oldPosition = current_marble->position;
-            current_marble->position = next_marble->position -1;
+              //LED ON position -1 for bounce
+              current_marble->oldPosition = current_marble->position;
+              current_marble->position = next_marble->position -1;
             
-            //-------- Draw Marble ---------//
-            if( current_marble->oldPosition !=  ( next_marble->position -1) ){
-              strip.setPixelColor( current_marble->oldPosition, strip.Color(0, 0, 0) );
-              strip.show();
-              strip.setPixelColor( current_marble->position , current_marble->color  );
-              strip.show();
-            }
-          
-            //Change to the next marble . Exception for the first marble.
-            bounce_to_marble( next_marble );
-            players [current_nplayer].search_crash_marble();
-          }else{
-            
-            // ----- Standard Marble Manager ----- //
-  
-            current_marble->oldPosition = current_marble->position;
-            current_marble->position += round( dx );
-            
-            // Back to the origin
-            if( current_marble->position > NUM_LEDS_PER_STRIP ){
-              current_marble->position = ( current_marble->position -1 ) % NUM_LEDS_PER_STRIP ;
-            }
-  
-            //-------- Refresh Over Marble ---------//
-            
-            // If position is greater than over_marble. Search and reconfigure.
-            if ( ( current_marble->position >= current_marble->over_marble->position ) && current_marble->firstinstrip == false ){
-              
-              shift_over_marble(  );
-              if ( current_marble->position == current_marble->over_marble->position ){
-                current_marble->position ++;
+              //-------- Draw Marble ---------//
+              if( current_marble->oldPosition !=  ( next_marble->position -1) ){
+                  strip.setPixelColor( current_marble->oldPosition, strip.Color(0, 0, 0) );
+                  strip.show();
+                  strip.setPixelColor( current_marble->position , current_marble->color  );
+                  strip.show();
               }
-            }
-            
-            //-------- Detect Over Holes ---------//
-            if ( ( current_marble->position  == current_marble->over_hole->position ) && ( round( dx ) == 0 ) ) {
-              Serial.println( "TAKEN");
-              current_marble->inHole = true;
-              marbleOn = false;
-              players [current_nplayer].points += 5;
-              current_marble->over_hole->take();
-            }
-
-            /*if ( current_marble->position  == current_marble->over_failhole->position ) {
-              current_marble->inHole = true;
-              marbleOn = false;
-              players [current_nplayer].points -= 3;
-              current_marble->over_hole->take();
-            }*/
-            //-------- Draw Marble ---------//
-
-            strip.setPixelColor( current_marble->oldPosition, strip.Color(0, 0, 0) );
-            strip.show();
-            strip.setPixelColor( current_marble->position , current_marble->color  );
-            strip.show();
-          }
           
+              //Change to the next marble . Exception for the first marble.
+              bounce_to_marble( next_marble );
+              players [current_nplayer].search_crash_marble();
+            }else{
+            
+              // ----- Standard Marble Manager ----- //
+  
+              current_marble->oldPosition = current_marble->position;
+              current_marble->position += round( dx ); //Este valor nunca llega a cero
+              
+              // Back to the origin
+              if( current_marble->position > NUM_LEDS_PER_STRIP ){
+                current_marble->position = ( current_marble->position -1 ) % NUM_LEDS_PER_STRIP ;
+              }
+  
+              //-------- Refresh Over Marble ---------//
+            
+              // If position is greater than over_marble. Search and reconfigure.
+              if ( ( current_marble->position >= current_marble->over_marble->position ) && current_marble->firstinstrip == false ){
+              
+                shift_over_marble(  );
+                if ( current_marble->position == current_marble->over_marble->position ){
+                    current_marble->position ++;
+                }
+              }
+            
+              
+  
+              if (  current_marble->position  > current_marble->over_hole->position  ) {
+                Serial.println( "PASS");
+                current_marble->setOverHole( current_marble->over_hole->next_hole );
+                Serial.println( current_marble->over_hole->position );
+              }
+              //-------- Draw Marble ---------//
+
+                strip.setPixelColor( current_marble->oldPosition, strip.Color(0, 0, 0) );
+                strip.show();
+                strip.setPixelColor( current_marble->position , current_marble->color  );
+                strip.show();
+          }
+
+
+              
           #ifdef MEMORY_DEBUG
             Serial.println( freeMemory()  );
           #endif
@@ -747,19 +739,15 @@ class marblegame{
 
           //Draw Holes and Calculate Saturation
           nhole ++;
-          if ( nhole == NHOLES ){
+          if ( nhole == ( NHOLES +NFAILHOLES ) ){
             hole_cos += 20;
           }
-          nhole = nhole % NHOLES;
+          nhole = nhole % ( NHOLES +NFAILHOLES );
           //strip.setPixelColor( holes[ nhole ].position, strip.gamma32( strip.ColorHSV( holes[ nhole ].color, hole_sat/2*(1+cos( (hole_cos%360)*PI/180 ) ), BRIGHTNESS )  )  );
           strip.setPixelColor( holes[ nhole ].position, strip.gamma32( strip.ColorHSV( 65536/3, hole_sat/2*(1+cos( (hole_cos%360)*PI/180 ) ), BRIGHTNESS )  )  );
           strip.show();
 
-          //Draw FailHoles
-          nfailhole ++;
-          nfailhole = nfailhole % NFAILHOLES;
-          strip.setPixelColor( failholes[ nfailhole ].position, strip.gamma32(strip.ColorHSV( failholes[ nfailhole ].color, hole_sat/2*(1+cos( (hole_cos%360)*PI/180 ) ), BRIGHTNESS )  )  );
-          strip.show();
+          //Draw FailHoles in color RED 
           
        }
     }

@@ -16,7 +16,7 @@ Adafruit_NeoPixel stripe = Adafruit_NeoPixel(NUM_LEDS_PER_STRIP, PIN, NEO_GRB + 
 
 //----- MARBLE GAME Configuration -----//
 #define NUM_PLAYERS 2 //Fail for Players >= 3
-#define NUM_MARBLES 3 //Marbles each player
+#define NUM_MARBLES 2 //Marbles each player
 
 // Sum of MAX_POWER and MAX_WIND_POWER must be 100
 #define MAX_WIND_POWER 30

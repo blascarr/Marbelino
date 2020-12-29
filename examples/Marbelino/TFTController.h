@@ -58,10 +58,6 @@ class TFTMarble : public Adafruit_ST7735 {
     uint8_t marble_w = 25;
     uint8_t marble_e = 0;
     
-    bool onback = false;
-    int base_signal = 521;
-    int signal_offset = 10;
-
     TFTMarble(int CS,int DC,int RST) : Adafruit_ST7735 ( CS, DC, RST) {
 
     }
@@ -89,40 +85,20 @@ class TFTMarble : public Adafruit_ST7735 {
           
     }
 
-    int draw_powerbar( int reading, int raw){
-          int power_h = 0;
-          int constantForce = 5;
-          int medium_value = 512; // Mid value of 1023 / 512. To add constant force, you need to add amount on this variable
-          
-          int invert_sample = ( 1023 - raw );
-          int invert_value = ( 1023 - reading );
-          
-          if ( invert_sample > 700 ){ onback = true; }
-         
-          //Fix Fire Once - Non negative values
-          bool offset = ( invert_sample <= ( base_signal + signal_offset ) ) && ( invert_sample >=  base_signal - signal_offset  ) && ( invert_value > medium_value );
-          
-          if( offset && onback ){
-            onback = false;
-            power_h = ( (long)( invert_value - medium_value )*100)/medium_value + constantForce; // 0 - 100 Value
-            power_h = (power_h > 100)? 100 : power_h; //Clean to 100 in case reading errors up to limit
-            
+    void draw_powerbar( int power_h){
+        if( power_h > 0 ){
             int power_tft = (power_h*power_height )/100; // Convert to pixels 
-              
+          
             //Clean TFT 
             TFTMarble::fillRect( power_x+1, power_y+1, power_w-2, power_height - power_tft , TFTWHITE  );
             
             //Blue Bar
             TFTMarble::fillRect( power_x+1, power_y+1 + power_height - power_tft , power_w-2, power_tft-1 , TFTBLUE  );
-
+    
             //Power Label
             TFTMarble::clearLabel( "888" , power_x + power_w + 5, power_y , TFTBLUE );
             TFTMarble::println( power_h );
-            
-          }
-
-          return power_h;
-    
+        }
     }
     
     void draw_wind_arrow( ){

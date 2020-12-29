@@ -45,6 +45,44 @@ uint32_t colorList[] = {
   CYAN
 };
 
+class hole{
+  public:
+    int position = 0;
+    bool isgood = true;
+    uint32_t color =  Color( 0,255,255 );
+    bool taken = false;
+    hole* next_hole;
+    
+    hole(){
+      
+    }
+    
+    hole( int pos , bool glory ): position( pos ), isgood( glory ) {
+      
+    }
+
+    void set_position( int pos ){
+      position = pos;
+    }
+    
+    void set_color( uint32_t c ){
+      color = c;
+    }
+
+    void take(){
+      taken = true;
+      color = WHITE;
+    }
+
+    void setOverHole( hole* next ){
+      next_hole = next;
+    }
+
+    int operator - ( const hole& obj ) {
+        return ( position - obj.position );
+    }
+};
+
 class marble{
   public:
     uint32_t color =  Color( 0,0,0 );
@@ -52,8 +90,10 @@ class marble{
     int position = 0;
     marble* next_marble;
     marble* over_marble;
+    hole* over_hole;
     bool first = false;
     bool firstinstrip = false;
+    bool inHole = false;
         
     marble( ):color( Color( 0,0,255 ) ){
     
@@ -63,7 +103,11 @@ class marble{
      
     }
 
-    void setColor( uint32_t c ){
+    void set_position( int pos ){
+      position = pos;
+    }
+    
+    void set_color( uint32_t c ){
       color = c;
     }
 
@@ -77,6 +121,10 @@ class marble{
 
     void setOverMarble( marble* marble ){
       over_marble = marble;
+    }
+
+    void setOverHole( hole* next_hole ){
+      over_hole = next_hole;
     }
 };
 
@@ -99,16 +147,12 @@ int compareMarblePointers_ASC(const void * a, const void * b)
   return  ( pa->position < pb->position );
 }
 
-class hole{
-  public:
-    int position = 0;
-    bool isgood = true;
-    
-    hole( int pos , bool glory ): position( pos ), isgood( glory ) {
-      
-    }
-    
-};
+int compareHolePointers_ASC(const void * a, const void * b)
+{
+  const hole* pa = *( const hole ** )a;
+  const hole* pb = *( const hole ** )b;
+  return  ( pa->position > pb->position );
+}
 
 class marbleplayer{
   public:
@@ -141,7 +185,7 @@ class marbleplayer{
       marbles[0].first = true;
       
       for ( int i = 0; i < NUM_MARBLES; i++ ){
-         marbles[i].setColor( colorList[ i ] );
+         marbles[i].set_color( colorList[ i ] );
          marblequeue[i] = &marbles[i];
 
          //Set order position for each marble under cero for first launch
@@ -211,9 +255,11 @@ class marblegame{
     TFTMarble& tft;
 
     marble* overqueue[ NUM_MARBLES*NUM_PLAYERS ];
+    hole* overholes[ NHOLES ];
+    hole* overfailholes[ NFAILHOLES ];
     
     bool marbleOn = true;
-    uint8_t power = 50;
+    int power = 50;
     
     float friction = -40;
 
@@ -240,11 +286,19 @@ class marblegame{
     int T_MIN_VALUE = 30;
     int T_MAX_VALUE = 300;
 
+    long hole_timestamp;
+    int hole_interval = 50;
     
     //----- Wind Controller -----//
-    uint16_t wind_force = 0;
-    uint16_t wind_angle = 0;
-    
+    int wind_force = 0;
+    uint16_t wind_angle = 180;
+    //----- Power Controller -----//
+    bool onback = false;
+    int base_signal = 521;
+    int signal_offset = 10;
+
+    //----- Game Configuration -----//
+    bool windout = WINDOUT;
     
     marbleplayer players[ NUM_PLAYERS ];
     
@@ -252,6 +306,15 @@ class marblegame{
     uint8_t current_nplayer = 0;
     uint8_t num_players = 0;
 
+    //----- Hole Controller -----//
+    int nhole = 0;
+    int nfailhole = 0;
+    uint8_t hole_sat = 255;
+    uint16_t hole_cos = 0;
+    hole holes[ NHOLES ];
+    
+    uint16_t failhole_cos = 0;
+    hole failholes[ NFAILHOLES ];
     
     marblegame(){
     
@@ -270,9 +333,7 @@ class marblegame{
           num_players++;
 
           for ( int j = 0; j < NUM_MARBLES; j++ ){
-              //Set order position for each marble under cero for first launch
-              
-              // Asociamos inicialmente puntero a las canicas por orden de aparicion 
+              // Asociamos inicialmente puntero over a las canicas por orden de aparicion 
               overqueue[i*NUM_MARBLES+j] = &(players[ i ].marbles[j]); 
           }  
       }
@@ -286,12 +347,32 @@ class marblegame{
         // Draw Radar Interface
         tft.draw_radar();
         wind_force = random( 100 );
+        wind_angle = random( 360 );
         tft.draw_wind_force( wind_force );
         
         //Start with next player
         current_nplayer = NUM_PLAYERS-1;
+
+        //---Paint Holes in Strip
+        for ( int i = 0; i < NHOLES; i++ ){
+              uint32_t rgbcolor = strip.ColorHSV( 65536/3  );
+              holes[i].set_position( random( NUM_LEDS_PER_STRIP ) );
+              holes[i].set_color( rgbcolor );
+              overholes[i]  = &holes[i];
+        }
+
+        for ( int i = 0; i < NFAILHOLES; i++ ){
+              uint32_t rgbcolor = strip.ColorHSV( 0  );
+              failholes[i].set_position( random( NUM_LEDS_PER_STRIP ) );
+              failholes[i].set_color( rgbcolor );
+              overfailholes[ i ]  = &failholes[i];
+        }
+
+        //List overhole has now in first place good holes and failholes in the back
+        //Init order in holequeue
+        marblegame::search_over_hole();
         
-        //Set Marble colors for each player
+        //----Set Marble colors for each player
         //For thinner range subdivide in more parts. Default 6 for RED - YELLOW - GREEN - CYAN - BLUE - MAGENTA
         uint8_t HSV_divisor = 6;
         
@@ -317,12 +398,15 @@ class marblegame{
           for ( int j = 0; j < NUM_MARBLES; j++ ){
             //Set Marble colors for each player
             uint32_t rgbcolor = strip.ColorHSV( ( j*marbleRange + colorOffset )% 65536  );
-            players[ i ].marbles[j].setColor( rgbcolor );
+            players[ i ].marbles[j].set_color( rgbcolor );
             
             //Establecemos la configuracion inicial a la siguiente canica en la lista
             
             int index = ( (i*NUM_MARBLES+j-1) < 0 )? ( index = i + NUM_MARBLES *NUM_PLAYERS -1 ):( index = (i*NUM_MARBLES+j-1) );
             players[ i ].marbles[j].setOverMarble( overqueue[ index ] );
+
+            //Relacionar todas las canicas con el primer hole de la lista.
+            players[ i ].marbles[j].setOverHole( overholes[ 0 ] );
             
           }  
         }
@@ -334,7 +418,6 @@ class marblegame{
         for ( int i = 0; i < NUM_PLAYERS; i++ ){
           tft.draw_marble( players[i].marbles[0].color, i );
         }
-        
     }
     
     //------------------Players Manager---------------------------//
@@ -389,7 +472,6 @@ class marblegame{
       for ( int i= 0 ; i < NUM_MARBLES*NUM_PLAYERS; i++ ){
         int index = ( (i-1) < 0 )? ( index = i + NUM_MARBLES *NUM_PLAYERS -1 ):( index = ( i-1 ) );
         overqueue[i]->setOverMarble( overqueue[ index ] );
-        
       }
 
       // Set first marble in strip and set false the second one
@@ -415,6 +497,55 @@ class marblegame{
       */
     }
 
+    void search_over_hole(){
+      int n = sizeof(overholes) / sizeof(overholes[0]); 
+      qsort( overholes, n, sizeof(overholes[0]) , compareHolePointers_ASC );
+
+      // Define next holes for each element
+      //Guardar over Hole pointer in object
+      for ( int i= 0 ; i < NHOLES ; i++ ){
+        int index = (i+1)%NHOLES;
+
+        overholes[i]->setOverHole( overholes[ index ] );
+      }
+
+      //Guardar over FAIL Hole pointer in object
+      int nf = sizeof(overfailholes) / sizeof(overfailholes[0]); 
+      qsort( overfailholes, nf, sizeof(overfailholes[0]) , compareHolePointers_ASC );
+
+      for ( int i= 0 ; i < NFAILHOLES; i++ ){
+        int index = (i+1)%NFAILHOLES;
+        overfailholes[i]->setOverHole( overfailholes[ index ] );
+      }
+      
+      /*Serial.println();
+       for ( int i= 0 ; i < NHOLES; i++ ){
+        int index = (i+1)%NHOLES;
+          //int index = ( (i-1) < 0 )? ( index = i + NHOLES -1 ):( index = ( i-1 ) );
+          Serial.print( i );         
+          Serial.print( " - \t" );
+          Serial.print( index );
+          Serial.print( " - \t" );
+          Serial.print( overholes[i]->position );
+          Serial.print( " - \t" );
+          Serial.println( overholes[i]->next_hole->position );        
+       }
+        Serial.println();
+       for ( int i= 0 ; i < NFAILHOLES; i++ ){
+        int index = (i+1)%NFAILHOLES;
+          //int index = ( (i-1) < 0 )? ( index = i + NFAILHOLES -1 ):( index = ( i-1 ) );
+          Serial.print( i );         
+          Serial.print( " - \t" );
+          Serial.print( index );
+          Serial.print( " - \t" );
+          Serial.print( overfailholes[i]->position );
+          Serial.print( " - \t" );
+          Serial.println( overfailholes[i]->next_hole->position );        
+       }
+       */
+
+    }
+    
     void shift_over_marble( ){
       #ifdef DEBUG
         Serial.println( "OVERMARBLE - ");
@@ -512,6 +643,21 @@ class marblegame{
               }
             }
             
+            //-------- Detect Over Holes ---------//
+            if ( ( current_marble->position  == current_marble->over_hole->position ) && ( round( dx ) == 0 ) ) {
+              Serial.println( "TAKEN");
+              current_marble->inHole = true;
+              marbleOn = false;
+              players [current_nplayer].points += 5;
+              current_marble->over_hole->take();
+            }
+
+            /*if ( current_marble->position  == current_marble->over_failhole->position ) {
+              current_marble->inHole = true;
+              marbleOn = false;
+              players [current_nplayer].points -= 3;
+              current_marble->over_hole->take();
+            }*/
             //-------- Draw Marble ---------//
 
             strip.setPixelColor( current_marble->oldPosition, strip.Color(0, 0, 0) );
@@ -557,9 +703,34 @@ class marblegame{
     void update_power(){
       if ( millis()- power_time > power_interval ) {
         power_time = millis();
+        power = 0;
         int reading = joystick.readY();
+        int raw = joystick.readYraw();
         
-        int power = tft.draw_powerbar( reading, joystick.readYraw() );
+        int constantForce = 5;
+        int medium_value = 512; // Mid value of 1023 / 512. To add constant force, you need to add amount on this variable
+        
+        int invert_sample = ( 1023 - raw );
+        int invert_value = ( 1023 - reading );
+        
+        if ( invert_sample > 700 ){ onback = true; }
+       
+        //Fix Fire Once - Non negative values
+        bool offset = ( invert_sample <= ( base_signal + signal_offset ) ) && ( invert_sample >=  base_signal - signal_offset  ) && ( invert_value > medium_value );
+        
+        if( offset && onback ){
+          onback = false;
+          power = ( (long)( invert_value - medium_value )*100)/medium_value + constantForce; // 0 - 100 Value
+          power = (power > 100)? 100 : power; //Clean to 100 in case reading errors up to limit
+
+          if( windout ){
+            //---- Power Proportion + Wind Power ----//
+            int wind_offset = (wind_angle + 180)%360;
+            power = (power*MAX_POWER)/100 + ( wind_force*cos( wind_offset*PI/180 )*MAX_WIND_POWER)/100 ;
+          }
+          tft.draw_powerbar( power );
+        }
+        
         if( power > 0 ){
           
             marblegame::launch( power );
@@ -569,12 +740,36 @@ class marblegame{
         } 
       }
     }
+
+    void update_holes(){
+       if ( millis()- hole_timestamp > hole_interval ) {
+          hole_timestamp = millis();
+
+          //Draw Holes and Calculate Saturation
+          nhole ++;
+          if ( nhole == NHOLES ){
+            hole_cos += 20;
+          }
+          nhole = nhole % NHOLES;
+          //strip.setPixelColor( holes[ nhole ].position, strip.gamma32( strip.ColorHSV( holes[ nhole ].color, hole_sat/2*(1+cos( (hole_cos%360)*PI/180 ) ), BRIGHTNESS )  )  );
+          strip.setPixelColor( holes[ nhole ].position, strip.gamma32( strip.ColorHSV( 65536/3, hole_sat/2*(1+cos( (hole_cos%360)*PI/180 ) ), BRIGHTNESS )  )  );
+          strip.show();
+
+          //Draw FailHoles
+          nfailhole ++;
+          nfailhole = nfailhole % NFAILHOLES;
+          strip.setPixelColor( failholes[ nfailhole ].position, strip.gamma32(strip.ColorHSV( failholes[ nfailhole ].color, hole_sat/2*(1+cos( (hole_cos%360)*PI/180 ) ), BRIGHTNESS )  )  );
+          strip.show();
+          
+       }
+    }
       
     update(){
       update_strip();
       update_readings();
       update_wind();
       update_power();
+      update_holes();
     }
 
     void impulse( int power ){
@@ -582,13 +777,58 @@ class marblegame{
     }
 
     void launch ( int power = 0 ){
+      
       marbleOn = true;
-      impulse(power);
+      
       timestamp = millis();
       timeInterval = T_MIN_VALUE;
       
       wind_force = random(100);
       tft.draw_wind_force( wind_force );
+
+      //-----  SIDE EFFECT - OUT OF EDGES     ------//
+      if( windout ){
+        int shot_angle = tft.current_angle;
+        
+        int wind_offset = ( (wind_angle - 90)%360 );
+        if( wind_offset > 180){ wind_offset = 180 - wind_offset%180;}
+        wind_offset = map( wind_offset, 0, 180, -90, 90) ;
+        
+        int power_angle =  ( shot_angle * POWER_ANGLE_SIDE/100) + (wind_offset*WIND_ANGLE_SIDE/100);
+        
+        String launch_head;
+        uint32_t wind_color;
+        
+        Serial.print(shot_angle);
+        Serial.print(" W-> ");
+        Serial.print(wind_offset);
+        Serial.print(" P-> ");
+        Serial.println(power_angle);
+        
+        if ( power_angle < ( -90 + OUT_OF_EDGES ) || power_angle > ( 90 - OUT_OF_EDGES ) ){
+           Serial.println( "OUT");
+           launch_head = "OUT";
+           wind_color = TFTRED;
+        }else if( power_angle > -OUT_OF_EDGES /2 && power_angle < OUT_OF_EDGES /2 ){
+          Serial.println("IMPULSE");
+          launch_head = "IMPULSE";
+          wind_color = TFTGREEN;
+          power = 2*power;
+        }else if( power_angle > 0 ){
+          Serial.println("SLICE");
+          launch_head = "RIGHT";
+          wind_color = TFTBLUE;
+        }else{
+          Serial.println("DRAW");
+          launch_head = "LEFT";
+          wind_color = TFTBLACK;
+        }
+        
+        tft.clearLabel( "IMPULSE" ,  tft.w/2+10, tft.h/4 , wind_color, true );
+        tft.println( launch_head );
+      }
+
+      impulse(power);
       
       for ( int i = 0; i < NUM_PLAYERS; i++ ){
         tft.draw_marble( players[i].marbles[0].color, i );

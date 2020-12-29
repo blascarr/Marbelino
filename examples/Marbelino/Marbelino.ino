@@ -18,6 +18,32 @@ Adafruit_NeoPixel stripe = Adafruit_NeoPixel(NUM_LEDS_PER_STRIP, PIN, NEO_GRB + 
 #define NUM_PLAYERS 2 //Fail for Players >= 3
 #define NUM_MARBLES 3 //Marbles each player
 
+// Sum of MAX_POWER and MAX_WIND_POWER must be 100
+#define MAX_WIND_POWER 30
+#define MAX_POWER 70
+
+// Sum of POWER_SIDE and WIND_SIDE must be 100
+#define POWER_SIDE 70
+#define WIND_SIDE 30
+
+// Intervals of outer Sides for Draw and Slice Shot
+#define POWER_ANGLE_SIDE 70
+#define WIND_ANGLE_SIDE 30
+
+#define OUT_OF_EDGES 45
+#define CENTER_SHOT 10
+
+#define WINDOUT false
+
+#define HOLES 2
+#define INC_HOLES (int)( (float)NUM_LEDS_PER_STRIP*(float)0.02)
+#define NHOLES ( (int)HOLES + (int)INC_HOLES )
+#define BRIGHTNESS 150
+
+#define FAILHOLES 1
+#define INC_FAILHOLES (int)( (float)NUM_LEDS_PER_STRIP*(float)0.01)
+#define NFAILHOLES ( (int)FAILHOLES + (int)INC_FAILHOLES )
+
 //----- JOYSTICK Configuration -----//
 int joystick_X = A0;
 int joystick_Y = A1;

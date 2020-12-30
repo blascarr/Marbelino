@@ -31,7 +31,6 @@ class JoystickController{
       pinMode( joystick_X, INPUT );
       pinMode( joystick_Y, INPUT );
       pinMode( joystick_C, INPUT_PULLUP );
-      pinMode( A5, INPUT );
       randomSeed( analogRead( A5) );
     }
 

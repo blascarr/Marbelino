@@ -1,6 +1,5 @@
 #include <SPI.h>  
-#include <Adafruit_GFX.h>    // Core graphics library
-#include <Adafruit_ST7735.h> // Hardware-specific library
+
 #include <SimpleKalmanFilter.h>
 #include <Adafruit_NeoPixel.h>
 
@@ -50,22 +49,19 @@ int joystick_Y = A1;
 int joystick_C = 4;
 
 #include "JoystickController.h"
-#include "TFTController.h"
 #include "MarbleGame.h"
 
 //Declaracion objeto TFT
-TFTMarble tft = TFTMarble(cs, dc, rst);
 
 JoystickController joy = JoystickController( joystick_X , joystick_Y ,  joystick_C );
 
-marblegame game( stripe, tft, joy );
+marblegame game( stripe, joy );
 
 
 void setup() {
   Serial.begin(9600);
   Serial.print("Marble Game");
   
-  tft.initR(INITR_BLACKTAB); // Tab Label for ST7735 TFT Screen (INITR_GREENTAB 0x0, INITR_REDTAB 0x1, INITR_BLACKTAB 0x2)
   game.setPlayername( "BLACKPEN", 0 );
   game.setPlayername( " REDPEN ", 1 );
   game.init();

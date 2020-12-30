@@ -250,8 +250,6 @@ class marblegame{
   public: 
     Adafruit_NeoPixel& strip;
     JoystickController& joystick;
-    TFTMarble& tft;
-
     marble* overqueue[ NUM_MARBLES*NUM_PLAYERS ];
     
     bool marbleOn = true;
@@ -314,7 +312,7 @@ class marblegame{
 
     marblegame( Adafruit_NeoPixel &marblestrip ): strip( marblestrip ){}
 
-    marblegame( Adafruit_NeoPixel &marblestrip, TFTMarble &tft_screen, JoystickController &joystick ): strip( marblestrip ), tft( tft_screen ),joystick( joystick ) {
+    marblegame( Adafruit_NeoPixel &marblestrip, JoystickController &joystick ): strip( marblestrip ),joystick( joystick ) {
       for ( int i = 0; i < NUM_PLAYERS; i++ ){
           players[ num_players ].playername = String( "Player "+ String( num_players +1 ) ); // Apunta el puntero del array al objeto externo.
 
@@ -331,14 +329,11 @@ class marblegame{
 
     void init(){
         strip.begin();
-        tft.init();
         joystick.init();
         
         // Draw Radar Interface
-        tft.draw_radar();
         wind_force = random( 100 );
         wind_angle = random( 360 );
-        tft.draw_wind_force( wind_force );
         
         //Start with next player
         current_nplayer = NUM_PLAYERS-1;
@@ -399,11 +394,6 @@ class marblegame{
         
         // Set first matble with true value, for control over other marbles
         players[ 0 ].marbles[ 0 ].firstinstrip = true;
-
-        //Draw Players. 
-        for ( int i = 0; i < NUM_PLAYERS; i++ ){
-          tft.draw_marble( players[i].marbles[0].color, i );
-        }
     }
     
     //------------------Players Manager---------------------------//
@@ -416,8 +406,10 @@ class marblegame{
       
       
       //Draw name o Top
-      tft.drawHeader( players [current_nplayer].playername );
-      tft.draw_score ( players [current_nplayer].points );
+      Serial.print( "Player: " );
+      Serial.print( players [current_nplayer].playername );
+      Serial.print( "- Score: " );
+      Serial.println( players [current_nplayer].points  );
       
       // Next Marble
       marblegame::set_next_marble();
@@ -588,7 +580,10 @@ class marblegame{
               players [current_nplayer].points -= 3;
             }
             //Paint score
-            tft.draw_score ( players [current_nplayer].points );
+            Serial.print( "Player: " );
+            Serial.print( players [current_nplayer].playername );
+            Serial.print( "- Score: " );
+            Serial.println( players [current_nplayer].points  );
             
             current_marble->over_hole->take();
             
@@ -670,8 +665,9 @@ class marblegame{
         joy_time = millis();
         int reading = joystick.readX();
         if ( ( reading != 0 ) && ( reading != joystick.last_reading ) ){
-          
-          tft.draw_arrow( reading );
+
+          //Draw Arrow 
+          //tft.draw_arrow( reading );
           
         }
         joystick.last_reading = reading;
@@ -681,10 +677,12 @@ class marblegame{
     void update_wind(){
       if ( millis()- wind_time > wind_interval ) {
         wind_time = millis();
- 
-        tft.draw_wind_arrow( );
-        
-        wind_angle = tft.current_arrow_angle;
+
+        //Draw Wind Arrow
+        //tft.draw_wind_arrow( );
+
+        wind_angle = 20;
+        //wind_angle = tft.current_arrow_angle;
         wind_angle %= 360;
       }
     }
@@ -717,14 +715,14 @@ class marblegame{
             int wind_offset = (wind_angle + 180)%360;
             power = (power*MAX_POWER)/100 + ( ( wind_force*cos( wind_offset*PI/180 )*MAX_WIND_POWER)/100 ) ;
             
-            /*Serial.print(" P ");
+            Serial.print(" P ");
             Serial.print(power);
             Serial.print(" O ");
             Serial.print((power*MAX_POWER)/100);
             Serial.print(" W ");
-            Serial.println(( wind_force*cos( wind_offset*PI/180 )*MAX_WIND_POWER)/100);*/
+            Serial.println(( wind_force*cos( wind_offset*PI/180 )*MAX_WIND_POWER)/100);
           }
-          tft.draw_powerbar( power );
+          
         }
         
         if( power > 0 ){
@@ -778,11 +776,11 @@ class marblegame{
       timeInterval = T_MIN_VALUE;
       
       wind_force = random(100);
-      tft.draw_wind_force( wind_force );
 
       //-----  SIDE EFFECT - OUT OF EDGES     ------//
       if( windout ){
-        int shot_angle = tft.current_angle;
+        // Move Shot Angle with Joystick in Serial
+        int shot_angle = 0;
         
         int wind_offset = ( (wind_angle - 90)%360 );
         if( wind_offset > 180){ wind_offset = 180 - wind_offset%180;}
@@ -802,31 +800,26 @@ class marblegame{
         if ( power_angle < ( -90 + OUT_OF_EDGES ) || power_angle > ( 90 - OUT_OF_EDGES ) ){
            Serial.println( "OUT");
            launch_head = "OUT";
-           wind_color = TFTRED;
+           
         }else if( ( power_angle > (-OUT_OF_EDGES /2) ) && ( power_angle < (OUT_OF_EDGES /2) ) ){
           Serial.println("IMPULSE");
           launch_head = "IMPULSE";
-          wind_color = TFTGREEN;
+          
           power = 2*power;
         }else if( power_angle > 0 ){
           Serial.println("SLICE");
           launch_head = "RIGHT";
-          wind_color = TFTBLUE;
+          
         }else{
           Serial.println("DRAW");
           launch_head = "LEFT";
-          wind_color = TFTBLACK;
+          
         }
         
-        tft.clearLabel( "IMPULSE" ,  tft.w/2+10, tft.h/4+15 , wind_color, true );
-        tft.println( launch_head );
       }
 
       impulse( power );
       
-      for ( int i = 0; i < NUM_PLAYERS; i++ ){
-        tft.draw_marble( players[i].marbles[0].color, i );
-      }
     }
 
     void set_wind_time ( int duration ){

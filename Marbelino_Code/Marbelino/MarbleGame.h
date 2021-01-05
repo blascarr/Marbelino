@@ -151,6 +151,7 @@ class marbleplayer{
     marble* current_marble;
     uint8_t current_nmarble = 0;
     uint8_t points = 0;
+    uint32_t color = TFTBLUE;
 
     marble* marblequeue[ NUM_MARBLES ]; //Lista de punteros hacia las canicas para procesar el orden
     marble marbles[ NUM_MARBLES ];      //Vector de canicas donde se guardan las canicas
@@ -168,6 +169,15 @@ class marbleplayer{
       init_marbles( num_player );
     }
 
+    marbleplayer( String name,uint32_t c  ):color( c ){
+      playername = name;
+      init_marbles( num_player );
+    }
+
+    void set_color( uint32_t c ){
+      color = c;
+    }
+    
     //----- Marble Manager -----//
     void init_marbles( int index = 0 ){
       
@@ -404,13 +414,17 @@ class marblegame{
 
         //Draw Players. 
         for ( int i = 0; i < NUM_PLAYERS; i++ ){
-          tft.draw_marble( players[i].marbles[0].color, i );
+          tft.draw_marble( players[i].color, i );
         }
     }
     
     //------------------Players Manager---------------------------//
     void setPlayername( String name, int index = 0 ){
       players[ index ].playername = name;
+    }
+
+    void setPlayercolor( uint32_t c, int index = 0 ){
+      players[ index ].set_color(c);
     }
 
     void nextPlayer(){
@@ -585,16 +599,14 @@ class marblegame{
             
             //Detect if hole or failhole
             if( current_marble->over_hole->isgood ){
-              players [current_nplayer].points += 5;
+              players [current_nplayer].points += HOLE_POINTS;
             }else{
-              players [current_nplayer].points -= 3;
+              players [current_nplayer].points -= FAILHOLE_POINTS;
             }
             //Paint score
             tft.draw_score ( players [current_nplayer].points );
             
             current_marble->over_hole->take();
-            
-            //Define new Holes, quit the hole
             
           }
 
@@ -752,9 +764,6 @@ class marblegame{
 
           strip.setPixelColor( holes[ nhole ].position, strip.gamma32( strip.ColorHSV( holes[ nhole ].color, hole_sat/2*(1+cos( (hole_cos%360)*PI/180 ) ), BRIGHTNESS )  )  );
           strip.show();
-
-          //Draw FailHoles in color RED 
-          
        }
     }
       
@@ -827,7 +836,7 @@ class marblegame{
       impulse( power );
       
       for ( int i = 0; i < NUM_PLAYERS; i++ ){
-        tft.draw_marble( players[i].marbles[0].color, i );
+        tft.draw_marble( players[i].color, i );
       }
     }
 

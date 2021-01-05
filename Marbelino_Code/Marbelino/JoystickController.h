@@ -22,7 +22,7 @@ SimpleKalmanFilter XFilter(kalman_measure, kalman_estimation, kalman_variance);
 class JoystickController{
   public:
     int joystick_X, joystick_Y, joystick_C; //INPUT PINS
-    int joystick_offset = 10; // Cleaning Limits
+    int joystick_offset = 20; // Cleaning Limits
     int step_arrow = 10;
     int last_reading = 0;
     
@@ -40,14 +40,8 @@ class JoystickController{
 
     int readX(){
       int sample;
-      //int reading = analogRead( joystick_X );
       int reading = map ( analogRead( joystick_X ), 0, 1023, MAX_JOYSTICK, MIN_JOYSTICK );
-      /*#ifdef JOYSTICK_DOWN
-        int reading = ( 1023 - analogRead( joystick_X ) );
-      #else
-        int reading =analogRead( joystick_X );
-      #endif
-      */
+      
       if ( ( reading > ( 1023/2 - joystick_offset ) )  &&  ( reading < ( 1023/2 + joystick_offset ) ) ){ reading = 1023/2 ;}
 
       sample = map ( reading , 0, 1023, step_arrow , -step_arrow );

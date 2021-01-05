@@ -44,6 +44,9 @@ Adafruit_NeoPixel stripe = Adafruit_NeoPixel(NUM_LEDS_PER_STRIP, PIN, NEO_GRB + 
 #define INC_FAILHOLES (int)( (float)NUM_LEDS_PER_STRIP*(float)0.01)
 #define NFAILHOLES ( (int)FAILHOLES + (int)INC_FAILHOLES )
 
+#define HOLE_POINTS 15
+#define FAILHOLE_POINTS 5
+
 //----- JOYSTICK Configuration -----//
 
 #define JOYSTICK_DOWN
@@ -87,6 +90,8 @@ void setup() {
   tft.initR(INITR_BLACKTAB); // Tab Label for ST7735 TFT Screen (INITR_GREENTAB 0x0, INITR_REDTAB 0x1, INITR_BLACKTAB 0x2)
   game.setPlayername( "BLACKPEN", 0 );
   game.setPlayername( " REDPEN ", 1 );
+  game.setPlayercolor( TFTBLUE, 0 );
+  game.setPlayercolor( TFTMAGENTA, 1 );
   game.init();
 
 }

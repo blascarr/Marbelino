@@ -63,7 +63,7 @@ class TFTMarble : public Adafruit_ST7735 {
     }
 
     void init(){
-      TFTMarble::setRotation(1); 
+      TFTMarble::setRotation( TFT_ORIENTATION ); 
       TFTMarble::fillScreen( TFTWHITE );
   
       w = TFTMarble::width();

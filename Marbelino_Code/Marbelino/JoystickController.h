@@ -2,6 +2,9 @@
 //------- INPUT Joystick Configuration -------//
 //--------------------------------------------//
 
+
+
+
 // Kalman Filter /////////////////////////////////////
 //Measurement Uncertainty - How much do we expect to our measurement vary
 #define kalman_measure 300
@@ -37,7 +40,14 @@ class JoystickController{
 
     int readX(){
       int sample;
-      int reading = analogRead( joystick_X );
+      //int reading = analogRead( joystick_X );
+      int reading = map ( analogRead( joystick_X ), 0, 1023, MAX_JOYSTICK, MIN_JOYSTICK );
+      /*#ifdef JOYSTICK_DOWN
+        int reading = ( 1023 - analogRead( joystick_X ) );
+      #else
+        int reading =analogRead( joystick_X );
+      #endif
+      */
       if ( ( reading > ( 1023/2 - joystick_offset ) )  &&  ( reading < ( 1023/2 + joystick_offset ) ) ){ reading = 1023/2 ;}
 
       sample = map ( reading , 0, 1023, step_arrow , -step_arrow );
@@ -48,13 +58,13 @@ class JoystickController{
     }
 
     int readY(){
-      int sample = analogRead( joystick_Y );
+      int sample =analogRead( joystick_Y );
       float estimated_value = YFilter.updateEstimate(sample);
       return estimated_value;
     }
 
     int readYraw(){
-      return analogRead( joystick_Y );
+        return  analogRead( joystick_Y );
     }
 
     bool readClick(){

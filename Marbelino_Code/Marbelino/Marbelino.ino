@@ -45,9 +45,28 @@ Adafruit_NeoPixel stripe = Adafruit_NeoPixel(NUM_LEDS_PER_STRIP, PIN, NEO_GRB + 
 #define NFAILHOLES ( (int)FAILHOLES + (int)INC_FAILHOLES )
 
 //----- JOYSTICK Configuration -----//
+
+#define JOYSTICK_DOWN
+
+#ifdef JOYSTICK_DOWN
+  #define MIN_JOYSTICK 0
+  #define MAX_JOYSTICK 1023
+#else
+  #define MIN_JOYSTICK 1023
+  #define MAX_JOYSTICK 0
+#endif 
+
 int joystick_X = A0;
 int joystick_Y = A1;
 int joystick_C = 4;
+
+//#define TFT_DOWN
+
+#ifdef TFT_DOWN
+  #define TFT_ORIENTATION 1
+#else
+  #define TFT_ORIENTATION 3
+#endif 
 
 #include "JoystickController.h"
 #include "TFTController.h"
@@ -63,7 +82,7 @@ marblegame game( stripe, tft, joy );
 
 void setup() {
   Serial.begin(9600);
-  Serial.print("Marble Game");
+  Serial.println("Marble Game");
   
   tft.initR(INITR_BLACKTAB); // Tab Label for ST7735 TFT Screen (INITR_GREENTAB 0x0, INITR_REDTAB 0x1, INITR_BLACKTAB 0x2)
   game.setPlayername( "BLACKPEN", 0 );

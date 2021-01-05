@@ -193,16 +193,18 @@ class marbleplayer{
     void set_current_marble( int nmarble ){
       current_nmarble = nmarble;
       current_marble = &marbles[ nmarble ];
-      Serial.print( "Player : ");
-      Serial.print( playername );
-      Serial.print( " - Marble : ");
-      Serial.print( current_nmarble );
-      Serial.print( " - isTaken : ");
-      Serial.println( current_marble->inHole );
+      /*
+        Serial.print( "Player : ");
+        Serial.print( playername );
+        Serial.print( " - Marble : ");
+        Serial.print( current_nmarble );
+        Serial.print( " - isTaken : ");
+        Serial.println( current_marble->inHole );
+       */
 
       #ifndef LOOPGAME
         if( current_marble->inHole > 0 ){
-          Serial.println( "JUMP TO NEXT MARBLE" );
+          //Serial.println( "JUMP TO NEXT MARBLE" );
           nextMarble();
         }
       #endif
@@ -292,7 +294,7 @@ class marblegame{
     //----- Power Controller -----//
     bool onback = false;
     int base_signal = 521;
-    int signal_offset = 10;
+    int signal_offset = 30;
 
     //----- Game Configuration -----//
     bool windout = WINDOUT;
@@ -318,8 +320,8 @@ class marblegame{
       for ( int i = 0; i < NUM_PLAYERS; i++ ){
           players[ num_players ].playername = String( "Player "+ String( num_players +1 ) ); // Apunta el puntero del array al objeto externo.
 
-          Serial.print( players[ num_players ].playername );
-          Serial.println( " added to the game" );
+          //Serial.print( players[ num_players ].playername );
+          //Serial.println( " added to the game" );
           num_players++;
 
           for ( int j = 0; j < NUM_MARBLES; j++ ){
@@ -577,7 +579,7 @@ class marblegame{
           //-------- Detect Over Holes ---------//
 
           if ( ( current_marble->position  == current_marble->over_hole->position ) && ( displacement == 0 ) ) {
-            Serial.println( "TAKEN");
+            //Serial.println( "TAKEN");
             current_marble->inHole = current_marble->inHole + 1 ;
             marbleOn = false;
             
@@ -603,7 +605,7 @@ class marblegame{
           
           // ----- Crash Detection with other marbles -----//
           if( ( current_marble->position + displacement >= next_marble->position ) && ( current_marble->first != true) ){
-              Serial.print(  players [current_nplayer].current_nmarble );Serial.println(" COLLISION");
+              //Serial.print(  players [current_nplayer].current_nmarble );Serial.println(" COLLISION");
             
               //LED ON position -1 for bounce
               current_marble->oldPosition = current_marble->position;
@@ -698,12 +700,12 @@ class marblegame{
         
         int constantForce = 5;
         int medium_value = 512; // Mid value of 1023 / 512. To add constant force, you need to add amount on this variable
-        
-        int invert_sample = ( 1023 - raw );
-        int invert_value = ( 1023 - reading );
+
+        int invert_sample = map( raw, 0, 1023, MIN_JOYSTICK, MAX_JOYSTICK );
+        int invert_value = map( reading, 0, 1023, MIN_JOYSTICK, MAX_JOYSTICK );
         
         if ( invert_sample > 700 ){ onback = true; }
-       
+        
         //Fix Fire Once - Non negative values
         bool offset = ( invert_sample <= ( base_signal + signal_offset ) ) && ( invert_sample >=  base_signal - signal_offset  ) && ( invert_value > medium_value );
         

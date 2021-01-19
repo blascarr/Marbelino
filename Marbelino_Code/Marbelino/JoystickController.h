@@ -2,9 +2,6 @@
 //------- INPUT Joystick Configuration -------//
 //--------------------------------------------//
 
-
-
-
 // Kalman Filter /////////////////////////////////////
 //Measurement Uncertainty - How much do we expect to our measurement vary
 #define kalman_measure 300

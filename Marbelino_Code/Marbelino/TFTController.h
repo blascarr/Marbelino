@@ -50,9 +50,11 @@ class TFTMarble : public Adafruit_ST7735 {
     uint8_t l_arrow = 20;
     
     int arrow_angle = 0;
-    int current_arrow_angle = 0;
+    int current_arrow_angle = 180;
     uint8_t minl_arrow = 8;
 
+    int last_power_angle =  0;
+    int last_wind_angle =  0;
     //--- Marble Drawing ---//
     uint8_t marble_h = 10;
     uint8_t marble_w = 25;
@@ -167,6 +169,22 @@ class TFTMarble : public Adafruit_ST7735 {
     void drawHeader( String header){
         TFTMarble::clearLabel( header ,  w/2 , power_y , TFTBLUE, true );
         TFTMarble::println( header );
+    }
+
+    void drawBorders( int ref_angle ){
+      uint8_t edge_length = 20;
+
+      TFTMarble::drawLine( w/2, h, w/2 + edge_length*sin( (last_power_angle)*PI/180 ), h - edge_length*cos( (last_power_angle )*PI/180 ) , TFTWHITE ); 
+      last_power_angle = ref_angle;
+
+      TFTMarble::drawLine( w/2, h, w/2 + edge_length*sin( (ref_angle)*PI/180 ), h - edge_length*cos( (ref_angle)*PI/180 ) , TFTMAGENTA ); 
+      TFTMarble::drawLine( w/2, h, w/2 + edge_length*sin( (ref_angle)*PI/180 ), h - edge_length*cos( (ref_angle)*PI/180 ) , TFTMAGENTA ); 
+      
+      TFTMarble::drawLine( w/2, h, w/2 + edge_length*sin( ( CENTER_SHOT)*PI/180 ), h - edge_length*cos( ( CENTER_SHOT)*PI/180 ) , TFTGREEN ); 
+      TFTMarble::drawLine( w/2, h, w/2 + edge_length*sin( ( -CENTER_SHOT)*PI/180 ), h - edge_length*cos( ( -CENTER_SHOT)*PI/180 ) , TFTGREEN ); 
+      
+      TFTMarble::drawLine( w/2, h, w/2 + edge_length*sin( ( OUT_OF_EDGES)*PI/180 ), h - edge_length*cos( ( OUT_OF_EDGES)*PI/180 ) , TFTBLUE );
+      TFTMarble::drawLine( w/2, h, w/2 + edge_length*sin( ( -OUT_OF_EDGES)*PI/180 ), h - edge_length*cos( ( -OUT_OF_EDGES)*PI/180 ) , TFTBLUE ); 
     }
 
     void clearLabel( String label , int x, int y, uint32_t c, bool center = false ){

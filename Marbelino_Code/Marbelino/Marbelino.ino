@@ -30,8 +30,10 @@ Adafruit_NeoPixel stripe = Adafruit_NeoPixel(NUM_LEDS_PER_STRIP, PIN, NEO_GRB + 
 #define POWER_ANGLE_SIDE 70
 #define WIND_ANGLE_SIDE 30
 
-#define OUT_OF_EDGES 45
-#define CENTER_SHOT 10
+#define OUT_OF_EDGES 45 // OUT OF RANGE
+#define CENTER_SHOT 10 //IMPULSE DEF
+
+#define IMPULSE_HELPER //IMPULSE DEF
 
 #define WINDOUT true
 

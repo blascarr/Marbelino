@@ -800,6 +800,7 @@ class marblegame{
         wind_offset = map( wind_offset, 0, 180, -90, 90) ;
         
         int power_angle =  ( shot_angle * POWER_ANGLE_SIDE/100) + (wind_offset*WIND_ANGLE_SIDE/100);
+        //int power_angle =  (wind_offset*WIND_ANGLE_SIDE/100);
         
         String launch_head;
         uint32_t wind_color;
@@ -814,7 +815,7 @@ class marblegame{
            Serial.println( "OUT");
            launch_head = "OUT";
            wind_color = TFTRED;
-        }else if( ( power_angle > (-OUT_OF_EDGES /2) ) && ( power_angle < (OUT_OF_EDGES /2) ) ){
+        }else if( ( power_angle > ( -CENTER_SHOT ) ) && ( power_angle < ( CENTER_SHOT ) ) ){
           Serial.println("IMPULSE");
           launch_head = "IMPULSE";
           wind_color = TFTGREEN;
@@ -831,6 +832,10 @@ class marblegame{
         
         tft.clearLabel( "IMPULSE" ,  tft.w/2+10, tft.h/4+15 , wind_color, true );
         tft.println( launch_head );
+
+        #ifdef IMPULSE_HELPER
+          tft.drawBorders( power_angle );
+        #endif
       }
 
       impulse( power );

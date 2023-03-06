@@ -204,17 +204,14 @@ class marbleplayer{
       current_nmarble = nmarble;
       current_marble = &marbles[ nmarble ];
       /*
-        Serial.print( "Player : ");
-        Serial.print( playername );
-        Serial.print( " - Marble : ");
-        Serial.print( current_nmarble );
-        Serial.print( " - isTaken : ");
-        Serial.println( current_marble->inHole );
+        DUMP( "Player : ", playername );
+        DUMP( " - Marble : ", current_nmarble );
+        DUMP( " - isTaken : ", current_marble->inHole );
        */
 
       #ifndef LOOPGAME
         if( current_marble->inHole > 0 ){
-          //Serial.println( "JUMP TO NEXT MARBLE" );
+          //DUMPSLN( "JUMP TO NEXT MARBLE" );
           nextMarble();
         }
       #endif
@@ -235,19 +232,12 @@ class marbleplayer{
       marblequeue[ NUM_MARBLES - 2 ]->first = false;
       
       /*for ( int i= 0 ; i < NUM_MARBLES; i++ ){
-          Serial.print( i );
-          Serial.print( " - " );
-          Serial.print( marbles[i].position );
-          //Serial.print( " - " );
-          //Serial.print( marblequeue[i]->position );
-
-          //Serial.print( " - " );
-          //Serial.print( marblequeue[(i+1) % NUM_MARBLES]->position );
-          
-          Serial.print( " - " );
-          Serial.print( marbles[i].next_marble->position );
-          Serial.print( " - " );
-          Serial.println( marbles[i].first );
+          DUMPV( i );
+          DUMPLN( " - " , marbles[i].position );
+          //DUMPLN( " - " , marblequeue[i]->position );
+          //DUMPLN( " - ", marblequeue[(i+1) % NUM_MARBLES]->position );
+          DUMPLN( " - " , marbles[i].next_marble->position );
+          DUMPLN( " - " , marbles[i].first );
 
       }*/
     }
@@ -330,8 +320,8 @@ class marblegame{
       for ( int i = 0; i < NUM_PLAYERS; i++ ){
           players[ num_players ].playername = String( "Player "+ String( num_players +1 ) ); // Apunta el puntero del array al objeto externo.
 
-          //Serial.print( players[ num_players ].playername );
-          //Serial.println( " added to the game" );
+          // DUMPV( players[ num_players ].playername );
+          // DUMPSLN( " added to the game" );
           num_players++;
 
           for ( int j = 0; j < NUM_MARBLES; j++ ){
@@ -430,7 +420,6 @@ class marblegame{
     void nextPlayer(){
       current_nplayer = ( current_nplayer == (int)(NUM_PLAYERS -1) ) ? 0: current_nplayer+1 ;
       
-      
       //Draw name o Top
       tft.drawHeader( players [current_nplayer].playername );
       tft.draw_score ( players [current_nplayer].points );
@@ -456,11 +445,10 @@ class marblegame{
           while ( players [current_nplayer].current_marble->inHole == true ){
             n++;
             players [current_nplayer].nextMarble();
-            Serial.print(" Next" );
-            Serial.print( n );
+            DUMPLN(" Next" , n );
             if ( n > NUM_MARBLES ) {
               String winHeader = players [current_nplayer].playername + " WIN";
-              Serial.println( winHeader );
+              DUMPSLN( winHeader );
               game_over = true;
               tft.drawHeader( winHeader );
               return;
@@ -492,16 +480,11 @@ class marblegame{
       #ifdef DEBUG
        for ( int i= 0 ; i < NUM_MARBLES*NUM_PLAYERS; i++ ){
           int index = ( (i-1) < 0 )? ( index = i + NUM_MARBLES *NUM_PLAYERS -1 ):( index = ( i-1 ) );
-          Serial.print( i );
-          Serial.print( " - \t" );
-          Serial.print( players[i/NUM_MARBLES].marbles[i%NUM_MARBLES].position );
-          Serial.print( " - \t" );
-          Serial.print( players[i/NUM_MARBLES].marbles[i%NUM_MARBLES].over_marble->position );
-          
-          Serial.print( " - \t" );
-          Serial.print( overqueue[i]->position );
-          Serial.print( " - \t" );
-          Serial.println( overqueue[index]->position );        
+          DUMPV( i );
+          DUMP( " - \t" , players[i/NUM_MARBLES].marbles[i%NUM_MARBLES].position );
+          DUMP( " - \t" , players[i/NUM_MARBLES].marbles[i%NUM_MARBLES].over_marble->position );
+          DUMP( " - \t" , overqueue[i]->position );
+          DUMPLN( " - \t" , overqueue[index]->position );        
        }
       #endif
       */
@@ -518,26 +501,22 @@ class marblegame{
         holes[i].setOverHole( &holes[ index ] );
       }
       
-      /*Serial.println();
+      /*DUMPPRINTLN();
        for ( int i= 0 ; i < n ; i++ ){
           int index = (i+1)%( n );
           //int index = ( (i-1) < 0 )? ( index = i + n -1 ):( index = ( i-1 ) );
-          Serial.print( i );         
-          Serial.print( " - \t" );
-          Serial.print( index );
-          Serial.print( " - \t" );
-          Serial.print( holes[i].position );
-          Serial.print( " - \t" );
-          Serial.print( holes[i].next_hole->position );  
-          Serial.print( " - \t" );
-          Serial.println( holes[i].isgood );       
+          DUMPV( i );         
+          DUMP( " - \t" , index );
+          DUMP( " - \t" , holes[i].position );
+          DUMP( " - \t" , holes[i].next_hole->position );  
+          DUMP( " - \t" , holes[i].isgood );       
        }*/
        
     }
     
     void shift_over_marble( ){
       #ifdef DEBUG
-        Serial.println( "OVERMARBLE - ");
+        DUMPSLN( "OVERMARBLE - ");
       #endif
       search_over_marble();
     }
@@ -556,18 +535,12 @@ class marblegame{
           v = v + friction*dt/(float)1000;
 
           #ifdef DEBUG
-            Serial.print( dt );
-            Serial.print( "," );
-            Serial.print( dx );
-            Serial.print( "," );
-            Serial.print( v * dt/(float)1000 );
-            Serial.print( "," );
-            Serial.print(0.5 * friction * pow( dt/(float)1000 , 2.0 ) );
-            Serial.print( "," );
-            Serial.print( round( dx ) );
-            Serial.print( "," );
-            Serial.print( timeInterval );
-            Serial.println();
+            DUMP("dt: ", dt );
+            DUMP( "," , dx );
+            DUMP( "," , v * dt/(float)1000 );
+            DUMP( "," ,0.5 * friction * pow( dt/(float)1000 , 2.0 ) );
+            DUMP( "," , round( dx ) );
+            DUMPLN( "," , timeInterval );
           #endif
           if ( round(dx) < 0 ){ dx = 0 ;}
           
@@ -593,7 +566,7 @@ class marblegame{
           //-------- Detect Over Holes ---------//
 
           if ( ( current_marble->position  == current_marble->over_hole->position ) && ( displacement == 0 ) ) {
-            //Serial.println( "TAKEN");
+            //DUMPSLN( "TAKEN");
             current_marble->inHole = current_marble->inHole + 1 ;
             marbleOn = false;
             
@@ -617,7 +590,7 @@ class marblegame{
           
           // ----- Crash Detection with other marbles -----//
           if( ( current_marble->position + displacement >= next_marble->position ) && ( current_marble->first != true) ){
-              //Serial.print(  players [current_nplayer].current_nmarble );Serial.println(" COLLISION");
+              //DUMPLN(" COLLISION",  players [current_nplayer].current_nmarble );
             
               //LED ON position -1 for bounce
               current_marble->oldPosition = current_marble->position;
@@ -669,10 +642,8 @@ class marblegame{
                 strip.show();
           }
 
-
-              
           #ifdef MEMORY_DEBUG
-            Serial.println( freeMemory()  );
+            DUMPV( freeMemory()  );
           #endif
         }
       }
@@ -731,22 +702,23 @@ class marblegame{
             int wind_offset = (wind_angle + 180)%360;
             power = (power*MAX_POWER)/100 + ( ( wind_force*cos( wind_offset*PI/180 )*MAX_WIND_POWER)/100 ) ;
             
-            /*Serial.print(" P ");
-            Serial.print(power);
-            Serial.print(" O ");
-            Serial.print((power*MAX_POWER)/100);
-            Serial.print(" W ");
-            Serial.println(( wind_force*cos( wind_offset*PI/180 )*MAX_WIND_POWER)/100);*/
+            /*DUMP(" P ", power);
+            DUMP(" O ", (power*MAX_POWER)/100);
+            DUMP(" W ", ( wind_force*cos( wind_offset*PI/180 )*MAX_WIND_POWER)/100);*/
           }
           tft.draw_powerbar( power );
         }
         
         if( power > 0 ){
           
-            marblegame::launch( power );
+            
             //Change Player and Next Marble
+            //In nextPlayer ordering of marbles  
             marblegame::nextPlayer();
+            //Search Over marbles with every marble
             marblegame::search_over_marble();
+            //Launch, swap pointers if launch is LEFT or RIGHT
+            marblegame::launch( power );
         } 
       }
     }
@@ -805,29 +777,44 @@ class marblegame{
         String launch_head;
         uint32_t wind_color;
         
-        /*Serial.print(shot_angle);
-        Serial.print(" W-> ");
-        Serial.print(wind_offset);
-        Serial.print(" P-> ");
-        Serial.println(power_angle);*/
+        /*DUMP("Shot Angle: ",shot_angle);
+        DUMP(" W-> ", wind_offset);
+        DUMPLN(" P-> ", power_angle);*/
         
         if ( power_angle < ( -90 + OUT_OF_EDGES ) || power_angle > ( 90 - OUT_OF_EDGES ) ){
-           Serial.println( "OUT");
+           DUMPSLN( "OUT");
            launch_head = "OUT";
            wind_color = TFTRED;
         }else if( ( power_angle > ( -CENTER_SHOT ) ) && ( power_angle < ( CENTER_SHOT ) ) ){
-          Serial.println("IMPULSE");
+          DUMPSLN("IMPULSE");
           launch_head = "IMPULSE";
           wind_color = TFTGREEN;
           power = 2*power;
         }else if( power_angle > 0 ){
-          Serial.println("SLICE");
+          DUMPSLN("SLICE");
           launch_head = "RIGHT";
           wind_color = TFTBLUE;
+          
+          // if player 2 , swap pointers next_marble, and over_marble
+          if( current_nplayer == 0){
+            DUMPSLN("SWAP RIGHT");
+            //marble* swap_next_marble = players[current_nplayer].current_marble->next_marble;
+            players[current_nplayer].current_marble->next_marble = players[current_nplayer].current_marble->over_marble;
+            //players[current_nplayer].current_marble->over_marble = swap_next_marble;
+          }
+          //players [current_nplayer]
         }else{
-          Serial.println("DRAW");
+          DUMPSLN("DRAW");
           launch_head = "LEFT";
           wind_color = TFTBLACK;
+          
+          // if player 1 , swap pointers next_marble, and over_marble
+          if( current_nplayer == 1){
+            DUMPSLN("SWAP LEFT");
+            //marble* swap_next_marble = players[current_nplayer].current_marble->next_marble;
+            players[current_nplayer].current_marble->next_marble = players[current_nplayer].current_marble->over_marble;
+            //players[current_nplayer].current_marble->over_marble = swap_next_marble;
+          }
         }
         
         tft.clearLabel( "IMPULSE" ,  tft.w/2+10, tft.h/4+15 , wind_color, true );

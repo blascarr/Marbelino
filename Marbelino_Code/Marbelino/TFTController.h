@@ -1,7 +1,9 @@
+#include <SPI.h>  
+#include <Adafruit_GFX.h>    // Core graphics library
+#include <Adafruit_ST7735.h> // Hardware-specific library
 //--------------------------------------------//
 //------------- TFT CONTROLLER ---------------//
 //--------------------------------------------//
-
 
 // These definitions map display functions to the Adduino UNO display header pins
 #define sclk 11
